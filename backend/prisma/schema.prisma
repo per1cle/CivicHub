@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Modelul de bază din diagrama ta
+model User {
+  id        Int      @id @default(autoincrement())
+  nume      String
+  prenume   String
+  email     String   @unique
+  parola    String
+  role      Role     @default(CETATEAN)
+
+  // Legături către profilurile specifice
+  citizen   Citizen?
+  official  Official?
+}
+
+enum Role {
+  CETATEAN
+  FUNCTIONAR
+}
+
+model Citizen {
+  id          Int      @id @default(autoincrement())
+  cnpVirtual  String   @unique
+  adresa      String
+  telefon     String
+  
+  // Relația cu User
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id])
+
+  // Relațiile din diagramă
+  reports      Report[]
+  requests     Request[]
+  appointments Appointment[]
+}
+
+model Official {
+  id          Int      @id @default(autoincrement())
+  departament String
+  gradAcces   Int
+  
+  // Relația cu User
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id])
+
+  // Relațiile din diagramă
+  monitoredReports Report[]
+  processedRequests Request[]
+}
+
+model Report { // Sesizare
+  id            Int      @id @default(autoincrement())
+  coordonateGPS String
+  categorie     String
+  descriere     String
+  foto          String?  // Salvăm calea către imagine (String)
+  status        String   @default("Trimis")
+
+  // Relații
+  citizenId     Int
+  citizen       Citizen  @relation(fields: [citizenId], references: [id])
+  
+  officialId    Int?
+  official      Official? @relation(fields: [officialId], references: [id])
+}
+
+model Request { // Cerere
+  id            Int      @id @default(autoincrement())
+  tip           String
+  dataDepunere  DateTime @default(now())
+  status        String   @default("In asteptare")
+  fisierAtasat  String?
+
+  // Relații
+  citizenId     Int
+  citizen       Citizen  @relation(fields: [citizenId], references: [id])
+  
+  officialId    Int?
+  official      Official? @relation(fields: [officialId], references: [id])
+}
+
+model Appointment { // Programare
+  id           Int      @id @default(autoincrement())
+  dataOra      DateTime
+  serviciuAles String
+  observatii   String?
+
+  // Relații
+  citizenId    Int
+  citizen      Citizen  @relation(fields: [citizenId], references: [id])
+}

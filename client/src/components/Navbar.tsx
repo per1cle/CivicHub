@@ -17,7 +17,7 @@ export default function Navbar() {
 
       <div style={{ display: "flex", gap: "15px" }}>
         <Link to="/map" style={{ color: "white" }}>
-          👤 User
+          Map
         </Link>
 
         <Link to="/admin/map" style={{ color: "#fbbf24" }}>

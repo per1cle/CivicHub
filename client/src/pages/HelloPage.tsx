@@ -9,8 +9,8 @@ const HelloPage = () => {
       <p>Portalul tău digital pentru serviciile primăriei.</p>
       
       <div className="button-group">
-        <button onClick={() => navigate('/login')}>Am deja cont (Login)</button>
-        <button onClick={() => navigate('/signup')}>Sunt nou aici (Sign Up)</button>
+        <button onClick={() => navigate('/login')}>Login</button>
+        <button onClick={() => navigate('/signup')}>Sign Up</button>
       </div>
     </div>
   );

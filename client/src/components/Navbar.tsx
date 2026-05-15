@@ -1,36 +1,20 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 export default function Navbar() {
   return (
-    <nav
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        padding: "12px 20px",
-        background: "#0f172a",
-        color: "white",
-      }}
-    >
-      <div style={{ fontWeight: "bold" }}>
-        CivicHub 🏛️
-      </div>
+    <nav className="navbar">
+      <NavLink to="/dashboard" className="nav-brand">
+        <span className="brand-icon">🏛️</span>
+        <span>CivicHub</span>
+      </NavLink>
 
-      <div style={{ display: "flex", gap: "15px" }}>
-        <Link to="/map" style={{ color: "white" }}>
-          Map
-        </Link>
-
-        <Link to="/admin/map" style={{ color: "#fbbf24" }}>
-          🧑‍💼 Admin
-        </Link>
-
-        <Link to="/payments" style={{ color: "white" }}>
-          💳 Plăți
-        </Link>
-
-        <Link to="/appointments" style={{ color: "white" }}>
-          📅 Programări
-        </Link>
+      <div className="nav-links">
+        <NavLink to="/map">Hartă sesizări</NavLink>
+        <NavLink to="/appointments">Programări</NavLink>
+        <NavLink to="/payments">Plăți</NavLink>
+        <NavLink to="/admin/map" className="nav-admin">
+          Panou admin
+        </NavLink>
       </div>
     </nav>
   );

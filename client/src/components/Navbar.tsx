@@ -12,10 +12,12 @@ export default function Navbar() {
         <NavLink to="/map">Hartă sesizări</NavLink>
         <NavLink to="/appointments">Programări</NavLink>
         <NavLink to="/payments">Plăți</NavLink>
+        <NavLink to="/login">Login</NavLink>
+        <NavLink to="/register">Register</NavLink>
         <NavLink to="/admin/map" className="nav-admin">
           Panou admin
-        </NavLink>
-      </div>
+      </NavLink>
+    </div>
     </nav>
   );
 }

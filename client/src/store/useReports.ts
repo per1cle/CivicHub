@@ -14,105 +14,74 @@ export type Report = {
   citizenName: string;
   createdAt: string;
   image?: string;
+  resolvedAt?: string | null;
 };
 
-const STORAGE_KEY = "civichub_reports";
-
-const initialReports: Report[] = [
-  {
-    id: 1,
-    title: "Groapă mare în carosabil lângă trecerea de pietoni",
-    lat: 45.7489,
-    lng: 21.2087,
-    status: "nou",
-    category: "Drumuri",
-    priority: "ridicata",
-    citizenName: "Ion Popescu",
-    createdAt: "2025-04-12",
-  },
-  {
-    id: 2,
-    title: "Stâlp de iluminat defect pe strada principală",
-    lat: 45.752,
-    lng: 21.215,
-    status: "in lucru",
-    category: "Iluminat public",
-    priority: "medie",
-    citizenName: "Ana Dumitrescu",
-    createdAt: "2025-04-14",
-  },
-  {
-    id: 3,
-    title: "Gunoi neridicat de câteva zile",
-    lat: 45.744,
-    lng: 21.204,
-    status: "rezolvat",
-    category: "Salubritate",
-    priority: "scazuta",
-    citizenName: "Mihai Stan",
-    createdAt: "2025-04-10",
-  },
-];
-
-function loadReports() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-
-  if (!saved) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialReports));
-    return initialReports;
-  }
-
-  try {
-    return JSON.parse(saved) as Report[];
-  } catch {
-    return initialReports;
-  }
-}
-
-function saveReports(reports: Report[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
-  window.dispatchEvent(new Event("reports-updated"));
-}
+const API_URL = "http://localhost:3001/api/reports";
 
 export function useReports() {
-  const [reports, setReports] = useState<Report[]>(loadReports);
+  const [reports, setReports] = useState<Report[]>([]);
+
+  async function fetchReports() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setReports(data);
+    } catch (err) {
+      console.error("Eroare fetchReports:", err);
+    }
+  }
 
   useEffect(() => {
-    const syncReports = () => {
-      setReports(loadReports());
-    };
-
-    window.addEventListener("storage", syncReports);
-    window.addEventListener("reports-updated", syncReports);
-
-    return () => {
-      window.removeEventListener("storage", syncReports);
-      window.removeEventListener("reports-updated", syncReports);
-    };
+    fetchReports();
   }, []);
 
-  const addReport = (report: Omit<Report, "citizenName" | "createdAt">) => {
-    const currentReports = loadReports();
+  const addReport = async (
+    report: Omit<Report, "citizenName" | "createdAt">
+  ) => {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(report),
+      });
 
-    const newReport: Report = {
-      ...report,
-      citizenName: "Cetățean autentificat",
-      createdAt: new Date().toISOString().slice(0, 10),
-    };
+      const data = await res.json();
 
-    const updatedReports = [newReport, ...currentReports];
+      if (!res.ok) {
+        return { success: false, message: data.message };
+      }
 
-    saveReports(updatedReports);
-    setReports(updatedReports);
+      setReports((prev) => [data, ...prev]);
+      return { success: true, report: data };
+    } catch (err) {
+      console.error("Eroare addReport:", err);
+      return { success: false, message: "Nu s-a putut trimite sesizarea." };
+    }
   };
 
-  const updateStatus = (id: number, status: ReportStatus) => {
-    const updatedReports = loadReports().map((r) =>
-      r.id === id ? { ...r, status } : r
-    );
+  const updateStatus = async (id: number, status: ReportStatus) => {
+    try {
+      const res = await fetch(`${API_URL}/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
 
-    saveReports(updatedReports);
-    setReports(updatedReports);
+      const updatedReport = await res.json();
+
+      if (!res.ok) return;
+
+      setReports((prev) =>
+        prev.map((report) => (report.id === id ? updatedReport : report))
+      );
+    } catch (err) {
+      console.error("Eroare updateStatus:", err);
+    }
   };
 
   return {

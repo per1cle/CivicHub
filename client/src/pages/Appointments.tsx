@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type AppointmentStatus = "confirmata" | "anulata";
 
@@ -10,6 +10,8 @@ type Appointment = {
   notes?: string;
   status: AppointmentStatus;
 };
+
+const API_URL = "http://localhost:3001/api/appointments";
 
 const services = [
   {
@@ -54,7 +56,11 @@ const monthNames = [
 const weekDays = ["Lun", "Mar", "Mie", "Joi", "Vin", "Sâm", "Dum"];
 
 function formatDateKey(date: Date) {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatHumanDate(dateKey: string) {
@@ -93,6 +99,19 @@ function buildCalendarDays(currentMonth: Date) {
   return calendarDays;
 }
 
+function mapAppointmentFromBackend(item: any): Appointment {
+  const dateObj = new Date(item.dataOra);
+
+  return {
+    id: item.id,
+    date: formatDateKey(dateObj),
+    time: dateObj.toTimeString().slice(0, 5),
+    service: item.serviciuAles,
+    notes: item.observatii || "",
+    status: "confirmata",
+  };
+}
+
 export default function Appointments() {
   const today = new Date();
 
@@ -104,24 +123,23 @@ export default function Appointments() {
   const [selectedService, setSelectedService] = useState(services[0].name);
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  const [appointments, setAppointments] = useState<Appointment[]>([
-    {
-      id: 1001,
-      date: formatDateKey(today),
-      time: "10:00",
-      service: "Acte de identitate",
-      notes: "Ridicare document",
-      status: "confirmata",
-    },
-    {
-      id: 1002,
-      date: formatDateKey(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2)),
-      time: "13:00",
-      service: "Urbanism",
-      status: "confirmata",
-    },
-  ]);
+  async function fetchAppointments() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      setAppointments(data.map(mapAppointmentFromBackend));
+    } catch (err) {
+      console.error(err);
+      setMessage("Nu s-au putut încărca programările.");
+    }
+  }
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
 
   const selectedDateKey = formatDateKey(selectedDate);
 
@@ -161,66 +179,93 @@ export default function Appointments() {
     );
   };
 
-  const handleBook = () => {
-    if (!selectedTime) {
-      setMessage("Alege o oră disponibilă pentru programare.");
+  const handleBook = async () => {
+  if (!selectedTime) {
+    setMessage("Alege o oră disponibilă pentru programare.");
+    return;
+  }
+
+  if (bookedSlots.includes(selectedTime)) {
+    setMessage("Acest slot este deja ocupat. Alege altă oră.");
+    return;
+  }
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        date: selectedDateKey,
+        time: selectedTime,
+        service: selectedService,
+        notes: notes.trim(),
+        citizenId: 1,
+      }),
+    });
+
+    const data = await res.json();
+    console.log("Răspuns backend:", data);
+
+    if (!res.ok) {
+      setMessage(data.message || "Programarea nu a putut fi salvată.");
       return;
     }
 
-    if (bookedSlots.includes(selectedTime)) {
-      setMessage("Acest slot este deja ocupat. Alege altă oră.");
-      return;
-    }
+    await fetchAppointments();
 
-    const newAppointment: Appointment = {
-      id: Date.now(),
-      date: selectedDateKey,
-      time: selectedTime,
-      service: selectedService,
-      notes: notes.trim(),
-      status: "confirmata",
-    };
-
-    setAppointments((prev) => [newAppointment, ...prev]);
     setSelectedTime("");
     setNotes("");
     setMessage(`Programare confirmată pentru ${selectedService}, ora ${selectedTime}.`);
+  } catch (err) {
+    console.error("Eroare frontend:", err);
+    setMessage("Programarea nu a putut fi salvată.");
+  }
+};
+
+  const cancelAppointment = async (id: number) => {
+    try {
+      await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+      });
+
+      await fetchAppointments();
+      setMessage("Programarea a fost anulată.");
+    } catch (err) {
+      console.error(err);
+      setMessage("Programarea nu a putut fi anulată.");
+    }
   };
 
-  const cancelAppointment = (id: number) => {
-    setAppointments((prev) =>
-      prev.map((appointment) =>
-        appointment.id === id
-          ? { ...appointment, status: "anulata" }
-          : appointment
-      )
-    );
-
-    setMessage("Programarea a fost anulată.");
-  };
-
-  const rescheduleAppointment = (id: number) => {
+  const rescheduleAppointment = async (id: number) => {
     if (!selectedTime) {
       setMessage("Pentru reprogramare, selectează mai întâi o oră disponibilă.");
       return;
     }
 
-    setAppointments((prev) =>
-      prev.map((appointment) =>
-        appointment.id === id
-          ? {
-              ...appointment,
-              date: selectedDateKey,
-              time: selectedTime,
-              service: selectedService,
-              status: "confirmata",
-            }
-          : appointment
-      )
-    );
+    try {
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: selectedDateKey,
+          time: selectedTime,
+          service: selectedService,
+          notes,
+        }),
+      });
 
-    setSelectedTime("");
-    setMessage("Programarea a fost reprogramată pe data și ora selectate.");
+      await fetchAppointments();
+
+      setSelectedTime("");
+      setMessage("Programarea a fost reprogramată pe data și ora selectate.");
+    } catch (err) {
+      console.error(err);
+      setMessage("Programarea nu a putut fi reprogramată.");
+    }
   };
 
   return (

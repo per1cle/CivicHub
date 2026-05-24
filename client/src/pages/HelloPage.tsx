@@ -1,7 +1,16 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const HelloPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  if (user) {
+    if (user.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="landing-container">
@@ -10,7 +19,7 @@ const HelloPage = () => {
       
       <div className="button-group">
         <button onClick={() => navigate('/login')}>Login</button>
-        <button onClick={() => navigate('/signup')}>Sign Up</button>
+        <button onClick={() => navigate('/register')}>Sign Up</button>
       </div>
     </div>
   );

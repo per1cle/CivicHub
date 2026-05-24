@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 type User = {
   id: number;
   nume: string;
+  prenume: string;
   email: string;
   role: string;
 };

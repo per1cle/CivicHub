@@ -6,11 +6,12 @@ import Appointments from "../pages/Appointments";
 import Payments from "../pages/Payments";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
+import HelloPage from "../pages/HelloPage"; // <-- adaugă asta
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/map" replace />} />
+      <Route path="/" element={<HelloPage />} /> 
 
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/map" element={<ReportsMapUser />} />
@@ -22,7 +23,7 @@ export default function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      <Route path="*" element={<Navigate to="/map" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

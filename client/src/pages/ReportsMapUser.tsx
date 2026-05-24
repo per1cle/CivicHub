@@ -25,6 +25,8 @@ const priorities: { label: string; value: ReportPriority }[] = [
   { label: "Ridicată", value: "ridicata" },
 ];
 
+//aici se extrag coordonatele concrete atunci cand e apasata harta
+//coordonatele selectate sunt salvate in: selected
 function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
@@ -115,12 +117,16 @@ export default function ReportsMapUser() {
     [reports, filteredReports.length]
   );
 
+  //aici are loc trimiterea sesizrii
   const handleAdd = async () => {
+  //nu lasa utilizatorul sa trimita sesizarea daca nu a ales o locatie
+  //sau nu a completat descrierea
   if (!selected || !title.trim()) {
     setMessage("Alege o locație pe hartă și completează descrierea.");
     return;
   }
 
+  //prin await see face legatura catre backend
   const result = await addReport({
     id: Date.now(),
     title: title.trim(),

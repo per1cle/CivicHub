@@ -14,91 +14,51 @@ export type Payment = {
   receiptCode?: string;
 };
 
-const STORAGE_KEY = "civichub_payments";
+const API_URL = "http://localhost:3001/api/payments";
 
-const initialPayments: Payment[] = [
-  {
-    id: 1,
-    title: "Impozit locuință",
-    amount: 250,
-    status: "neplatit",
-    category: "locuinta",
-    dueDate: "2025-05-30",
-  },
-  {
-    id: 2,
-    title: "Taxă auto",
-    amount: 120,
-    status: "neplatit",
-    category: "auto",
-    dueDate: "2025-06-15",
-  },
-  {
-    id: 3,
-    title: "Taxă certificat urbanism",
-    amount: 85,
-    status: "platit",
-    category: "urbanism",
-    dueDate: "2025-04-20",
-    date: "2025-04-12, 10:30",
-    receiptCode: "CH-2025-0003",
-  },
-];
-
-function loadPayments() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-
-  if (!saved) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(initialPayments));
-    return initialPayments;
-  }
-
-  try {
-    return JSON.parse(saved) as Payment[];
-  } catch {
-    return initialPayments;
-  }
-}
-
-function savePayments(payments: Payment[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(payments));
-  window.dispatchEvent(new Event("payments-updated"));
+function mapPaymentFromBackend(item: any): Payment {
+  return {
+    id: item.id,
+    title: item.title,
+    amount: item.amount,
+    status: item.status,
+    category: item.category,
+    dueDate: item.dueDate?.split("T")[0],
+    date: item.paidDate
+      ? new Date(item.paidDate).toLocaleString("ro-RO")
+      : undefined,
+    receiptCode: item.receiptCode || undefined,
+  };
 }
 
 export function usePayments() {
-  const [payments, setPayments] = useState<Payment[]>(loadPayments);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  async function fetchPayments() {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      setPayments(data.map(mapPaymentFromBackend));
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   useEffect(() => {
-    const syncPayments = () => {
-      setPayments(loadPayments());
-    };
-
-    window.addEventListener("storage", syncPayments);
-    window.addEventListener("payments-updated", syncPayments);
-
-    return () => {
-      window.removeEventListener("storage", syncPayments);
-      window.removeEventListener("payments-updated", syncPayments);
-    };
+    fetchPayments();
   }, []);
 
-  const pay = (id: number) => {
-    const updatedPayments = loadPayments().map((payment) =>
-      payment.id === id
-        ? {
-            ...payment,
-            status: "platit" as const,
-            date: new Date().toLocaleString("ro-RO"),
-            receiptCode: `CH-${new Date().getFullYear()}-${String(id).padStart(
-              4,
-              "0"
-            )}`,
-          }
-        : payment
-    );
+  const pay = async (id: number) => {
+    try {
+      await fetch(`${API_URL}/${id}/pay`, {
+        method: "PATCH",
+      });
 
-    savePayments(updatedPayments);
-    setPayments(updatedPayments);
+      await fetchPayments();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return {

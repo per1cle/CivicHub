@@ -128,9 +128,9 @@ export default function PaymentsUser() {
     };
   }, [payments]);
 
-  const handlePay = (payment: Payment) => {
-    pay(payment.id);
-    setToast(`Plata pentru "${payment.title}" a fost finalizată.`);
+  const handlePay = async (payment: Payment) => {
+  await pay(payment.id);
+  setToast(`Plata pentru "${payment.title}" a fost finalizată.`);
   };
 
   const resetFilters = () => {

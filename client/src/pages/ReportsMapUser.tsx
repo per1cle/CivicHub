@@ -115,30 +115,35 @@ export default function ReportsMapUser() {
     [reports, filteredReports.length]
   );
 
-  const handleAdd = () => {
-    if (!selected || !title.trim()) {
-      setMessage("Alege o locație pe hartă și completează descrierea.");
-      return;
-    }
+  const handleAdd = async () => {
+  if (!selected || !title.trim()) {
+    setMessage("Alege o locație pe hartă și completează descrierea.");
+    return;
+  }
 
-    addReport({
-      id: Date.now(),
-      title: title.trim(),
-      lat: selected.lat,
-      lng: selected.lng,
-      status: "nou",
-      category,
-      priority,
-      image,
-    });
+  const result = await addReport({
+    id: Date.now(),
+    title: title.trim(),
+    lat: selected.lat,
+    lng: selected.lng,
+    status: "nou",
+    category,
+    priority,
+    image,
+  });
 
-    setTitle("");
-    setCategory(categories[0]);
-    setPriority("medie");
-    setImage(undefined);
-    setSelected(null);
-    setMessage("Sesizarea a fost trimisă cu succes către primărie.");
-  };
+  if (!result?.success) {
+    setMessage(result?.message || "Sesizarea nu a putut fi trimisă.");
+    return;
+  }
+
+  setTitle("");
+  setCategory(categories[0]);
+  setPriority("medie");
+  setImage(undefined);
+  setSelected(null);
+  setMessage("Sesizarea a fost trimisă cu succes către primărie.");
+};
 
   const resetFilters = () => {
     setStatusFilter("toate");
@@ -195,6 +200,12 @@ export default function ReportsMapUser() {
           <small>după filtrele curente</small>
         </article>
       </section>
+
+      {reports.some((r) => r.status === "rezolvat") && (
+      <div className="appointment-toast">
+        Ai sesizări rezolvate recent. Acestea vor dispărea automat din cont în 24 de ore.
+      </div>
+    )}
 
       <section className="map-layout">
         <div className="map-shell">

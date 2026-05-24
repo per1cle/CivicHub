@@ -351,32 +351,34 @@ export default function ReportsMapAdmin() {
                 />
               )}
 
-              <div className="admin-status-actions">
-                <button
-                  className="status-action new"
-                  onClick={() => handleStatusChange(selectedReport.id, "nou")}
-                >
-                  Marchează Nou
-                </button>
+              {selectedReport.status !== "rezolvat" && (
+  <div className="admin-status-actions">
+    {selectedReport.status !== "nou" && (
+      <button
+        className="status-action new"
+        onClick={() => handleStatusChange(selectedReport.id, "nou")}
+      >
+        Marchează Nou
+      </button>
+    )}
 
-                <button
-                  className="status-action progress"
-                  onClick={() =>
-                    handleStatusChange(selectedReport.id, "in lucru")
-                  }
-                >
-                  În lucru
-                </button>
+    {selectedReport.status === "nou" && (
+      <button
+        className="status-action progress"
+        onClick={() => handleStatusChange(selectedReport.id, "in lucru")}
+      >
+        În lucru
+      </button>
+    )}
 
-                <button
-                  className="status-action solved"
-                  onClick={() =>
-                    handleStatusChange(selectedReport.id, "rezolvat")
-                  }
-                >
-                  Rezolvat
-                </button>
-              </div>
+    <button
+      className="status-action solved"
+      onClick={() => handleStatusChange(selectedReport.id, "rezolvat")}
+    >
+      Rezolvat
+    </button>
+  </div>
+)}
             </div>
           ) : (
             <div className="empty-state">
@@ -442,24 +444,28 @@ export default function ReportsMapAdmin() {
               </div>
 
               <div className="admin-row-actions">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStatusChange(report.id, "in lucru");
-                  }}
-                >
-                  Preia
-                </button>
+  {report.status === "nou" && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleStatusChange(report.id, "in lucru");
+      }}
+    >
+      Preia
+    </button>
+  )}
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStatusChange(report.id, "rezolvat");
-                  }}
-                >
-                  Rezolvă
-                </button>
-              </div>
+  {report.status !== "rezolvat" && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleStatusChange(report.id, "rezolvat");
+      }}
+    >
+      Rezolvă
+    </button>
+  )}
+</div>
             </article>
           ))}
         </div>

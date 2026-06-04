@@ -10,7 +10,7 @@ const Dashboard = () => {
 
   const { reports } = useReports();
   const { payments } = usePayments();
-  
+
   const [appointmentsCount, setAppointmentsCount] = useState(0);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ const Dashboard = () => {
           <div className="eyebrow">Dashboard personal</div>
           <h1>Bun venit, {user?.prenume || user?.nume || "cetățean"}!</h1>
           <p>
-            Ai acces rapid la sesizări, programări și serviciile digitale CivicHub. 
+            Ai acces rapid la sesizări, programări și serviciile digitale CivicHub.
           </p>
         </div>
         <button className="secondary-btn" style={{ maxWidth: 180 }} onClick={handleLogout}>
@@ -60,6 +60,10 @@ const Dashboard = () => {
       </section>
 
       <section className="dashboard-actions">
+        <Link to="/ghiseu" className="dashboard-action">
+          <h1>Ghișeu virtual</h1>
+          <p className="meta-line">Rezolvă-ți cererile și plățile fără să părăsești casa.</p>
+        </Link>
         <Link to="/map" className="dashboard-action">
           <h1>Hartă sesizări</h1>
           <p className="meta-line">Raportează probleme pe hartă și urmărește statusul.</p>
@@ -69,7 +73,7 @@ const Dashboard = () => {
           <h1>Programări online</h1>
           <p className="meta-line">Rezervă un slot la ghișeu fără telefon și fără cozi.</p>
         </Link>
-        
+
         <Link to="/payments" className="dashboard-action">
           <h1>Plăți și taxe</h1>
           <p className="meta-line">Achită-ți taxele locale rapid și securizat.</p>

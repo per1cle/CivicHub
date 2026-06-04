@@ -11,7 +11,7 @@ export default function Navbar() {
   };
 
   if (!user) {
-    return null; 
+    return null;
   }
 
   return (
@@ -25,19 +25,19 @@ export default function Navbar() {
         {user.role === 'FUNCTIONAR' ? (
           <>
             <NavLink to="/admin/dashboard">Dashboard Admin</NavLink>
-            <NavLink to="/admin/map" className="nav-admin">
-              Management Sesizări
-            </NavLink>
+            <NavLink to="/admin/map" className="nav-admin"> Management Sesizări</NavLink>
+            <NavLink to="/admin/requests" className="nav-admin"> Management Cereri</NavLink>
           </>
         ) : (
           <>
             <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/ghiseu">Ghișeu virtual</NavLink>
             <NavLink to="/map">Hartă sesizări</NavLink>
             <NavLink to="/appointments">Programări</NavLink>
             <NavLink to="/payments">Plăți</NavLink>
           </>
         )}
-        
+
         <button onClick={handleLogout} className="logout-btn">
           Logout
         </button>

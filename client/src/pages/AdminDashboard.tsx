@@ -53,11 +53,11 @@ const AdminDashboard = () => {
         </Link>
 
         {/* Vom putea adăuga ulterior rute pentru a gestiona programările și plățile din partea adminului */}
-        <div className="dashboard-action" style={{ opacity: 0.6, cursor: "not-allowed" }}>
-          <div className="eyebrow">În curând</div>
-          <h2>Registru Programări</h2>
-          <p className="meta-line">Aprobă sau reprogramează vizitele la ghișeu.</p>
-        </div>
+        <Link to="/admin/requests" className="dashboard-action">
+          <div className="eyebrow" style={{ color: "#0ea5e9" }}>Ghișeu Virtual</div>
+          <h2>Registru Cereri</h2>
+          <p className="meta-line">Aprobă, respinge și descarcă documentele depuse de cetățeni.</p>
+        </Link>
 
         <div className="dashboard-action" style={{ opacity: 0.6, cursor: "not-allowed" }}>
           <div className="eyebrow">În curând</div>

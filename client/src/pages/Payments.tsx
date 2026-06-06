@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { usePayments } from "../store/usePayments";
+import { useAuth } from "../context/AuthContext";
 import type { PaymentStatus, PaymentCategory, Payment } from "../store/usePayments";
 
 const categoryLabels: Record<PaymentCategory, string> = {
@@ -31,6 +32,81 @@ function formatRon(amount: number) {
   }).format(amount);
 }
 
+// 1. MODALUL DE PLATĂ (SIMULARE CARD) CU DESIGN PREMIUM
+function PaymentModal({
+  payment,
+  onClose,
+  onConfirm,
+}: {
+  payment: Payment;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handlePay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await onConfirm();
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <div className="receipt-backdrop" onClick={onClose}>
+      <div className="receipt-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="receipt-header">
+          <div>
+            <p className="eyebrow">Plată Securizată</p>
+            <h2>Finalizare Tranzacție</h2>
+          </div>
+          <button onClick={onClose} disabled={loading}>×</button>
+        </div>
+
+        <form onSubmit={handlePay} className="receipt-box" style={{ display: "grid", gap: "16px" }}>
+          <div className="admin-coordinates" style={{ textAlign: "center", background: "#f8fafc", padding: "20px" }}>
+            <span>Sumă de plată pentru {payment.title}</span>
+            <strong style={{ fontSize: "32px", color: "#0f172a", marginTop: "8px" }}>
+              {formatRon(payment.amount)}
+            </strong>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Nume pe card</label>
+            <input type="text" required placeholder="EX: POPESCU ION" />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Număr Card (Simulare)</label>
+            <input type="text" required placeholder="0000 0000 0000 0000" maxLength={19} />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Expirare</label>
+              <input type="text" required placeholder="MM/YY" maxLength={5} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>CVV</label>
+              <input type="password" required placeholder="***" maxLength={3} />
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: "10px", marginTop: "10px" }}>
+            <button type="submit" className="primary-action" disabled={loading}>
+              {loading ? "Se procesează..." : `Plătește ${formatRon(payment.amount)}`}
+            </button>
+            <button type="button" className="secondary-btn" onClick={onClose} disabled={loading}>
+              Anulează
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// 2. MODALUL DE CHITANȚĂ
 function ReceiptModal({
   payment,
   onClose,
@@ -39,14 +115,13 @@ function ReceiptModal({
   onClose: () => void;
 }) {
   return (
-    <div className="receipt-backdrop">
-      <div className="receipt-modal">
+    <div className="receipt-backdrop" onClick={onClose}>
+      <div className="receipt-modal" onClick={(e) => e.stopPropagation()}>
         <div className="receipt-header">
           <div>
             <p className="eyebrow">Chitanță digitală</p>
             <h2>CivicHub Payments</h2>
           </div>
-
           <button onClick={onClose}>×</button>
         </div>
 
@@ -85,26 +160,26 @@ function ReceiptModal({
   );
 }
 
+// 3. PAGINA PRINCIPALĂ
 export default function PaymentsUser() {
-  const { payments, pay } = usePayments();
+  const { user } = useAuth();
 
-  const [statusFilter, setStatusFilter] = useState<"toate" | PaymentStatus>(
-    "toate"
-  );
-  const [categoryFilter, setCategoryFilter] = useState<"toate" | PaymentCategory>(
-    "toate"
-  );
+  // Tragem plățile din context folosind ID-ul utilizatorului
+  const { payments, pay } = usePayments(user?.id);
+
+  const [statusFilter, setStatusFilter] = useState<"toate" | PaymentStatus>("toate");
+  const [categoryFilter, setCategoryFilter] = useState<"toate" | PaymentCategory>("toate");
   const [search, setSearch] = useState("");
+
+  // Stări pentru modale și notificări
   const [selectedReceipt, setSelectedReceipt] = useState<Payment | null>(null);
+  const [paymentToProcess, setPaymentToProcess] = useState<Payment | null>(null);
   const [toast, setToast] = useState("");
 
   const filteredPayments = useMemo(() => {
     return payments.filter((payment) => {
-      const matchesStatus =
-        statusFilter === "toate" || payment.status === statusFilter;
-
-      const matchesCategory =
-        categoryFilter === "toate" || payment.category === categoryFilter;
+      const matchesStatus = statusFilter === "toate" || payment.status === statusFilter;
+      const matchesCategory = categoryFilter === "toate" || payment.category === categoryFilter;
 
       const query = search.toLowerCase().trim();
       const matchesSearch =
@@ -128,9 +203,18 @@ export default function PaymentsUser() {
     };
   }, [payments]);
 
-  const handlePay = async (payment: Payment) => {
-  await pay(payment.id);
-  setToast(`Plata pentru "${payment.title}" a fost finalizată.`);
+  // Funcția apelată după ce formularul de card este "trimis"
+  const handleConfirmPayment = async () => {
+    if (!paymentToProcess) return;
+    try {
+      await pay(paymentToProcess.id);
+      setToast(`Plata pentru "${paymentToProcess.title}" a fost finalizată cu succes. Chitanța este disponibilă.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => setToast(""), 5000);
+    } catch (err) {
+      console.error(err);
+      setToast("A apărut o eroare la procesarea plății.");
+    }
   };
 
   const resetFilters = () => {
@@ -205,9 +289,7 @@ export default function PaymentsUser() {
 
             <select
               value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "toate" | PaymentStatus)
-              }
+              onChange={(e) => setStatusFilter(e.target.value as "toate" | PaymentStatus)}
             >
               <option value="toate">Toate statusurile</option>
               <option value="neplatit">Neplătit</option>
@@ -216,9 +298,7 @@ export default function PaymentsUser() {
 
             <select
               value={categoryFilter}
-              onChange={(e) =>
-                setCategoryFilter(e.target.value as "toate" | PaymentCategory)
-              }
+              onChange={(e) => setCategoryFilter(e.target.value as "toate" | PaymentCategory)}
             >
               <option value="toate">Toate categoriile</option>
               <option value="locuinta">Locuință</option>
@@ -280,7 +360,10 @@ export default function PaymentsUser() {
                   {payment.status === "neplatit" ? (
                     <button
                       className="payment-pay-btn"
-                      onClick={() => handlePay(payment)}
+                      onClick={() => {
+                        setToast("");
+                        setPaymentToProcess(payment);
+                      }}
                     >
                       Plătește acum
                     </button>
@@ -313,26 +396,10 @@ export default function PaymentsUser() {
 
           <div className="payment-benefits">
             <h3>Beneficii plăți online</h3>
-
-            <div>
-              <span>✓</span>
-              Plata se confirmă instant în cont.
-            </div>
-
-            <div>
-              <span>✓</span>
-              Chitanța digitală este generată automat.
-            </div>
-
-            <div>
-              <span>✓</span>
-              Istoricul rămâne disponibil permanent.
-            </div>
-
-            <div>
-              <span>✓</span>
-              Fără cozi, fără drumuri la ghișeu.
-            </div>
+            <div><span>✓</span> Plata se confirmă instant în cont.</div>
+            <div><span>✓</span> Chitanța digitală este generată automat.</div>
+            <div><span>✓</span> Istoricul rămâne disponibil permanent.</div>
+            <div><span>✓</span> Fără cozi, fără drumuri la ghișeu.</div>
           </div>
 
           <div className="payment-security-box">
@@ -345,6 +412,16 @@ export default function PaymentsUser() {
         </aside>
       </section>
 
+      {/* Randerăm modalul de plată dacă există o plată de procesat */}
+      {paymentToProcess && (
+        <PaymentModal
+          payment={paymentToProcess}
+          onClose={() => setPaymentToProcess(null)}
+          onConfirm={handleConfirmPayment}
+        />
+      )}
+
+      {/* Randerăm modalul de chitanță dacă este selectată una */}
       {selectedReceipt && (
         <ReceiptModal
           payment={selectedReceipt}

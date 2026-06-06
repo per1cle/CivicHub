@@ -3,37 +3,41 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useReports } from "../store/useReports";
 import { usePayments } from "../store/usePayments";
+import { useNotifications } from "../hooks/useNotifications";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const { reports } = useReports();
-  const { payments } = usePayments();
+  const { reports } = useReports(user?.id);
+  const { payments } = usePayments(user?.id);
+  const { unreadCount } = useNotifications();
 
   const [appointmentsCount, setAppointmentsCount] = useState(0);
 
   useEffect(() => {
-    // Fetch doar pentru a afla numarul de programari
     const fetchAppointmentsCount = async () => {
+      if (!user?.id) return;
       try {
-        const res = await fetch("http://localhost:3001/api/appointments");
+        const res = await fetch(`http://localhost:3001/api/appointments?userId=${user.id}`);
         if (res.ok) {
           const data = await res.json();
-          setAppointmentsCount(data.length);
+          const activeAppointments = data.filter((a: any) => a.status === "confirmata");
+          setAppointmentsCount(activeAppointments.length);
         }
       } catch (err) {
         console.error("Nu am putut aduce programarile", err);
       }
     };
     fetchAppointmentsCount();
-  }, []);
+  }, [user?.id]);
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
+  // Datele sunt acum filtrate direct de hook-uri
   const cereriActive = reports.filter((r) => r.status !== "rezolvat").length;
   const platiRestante = payments.filter((p) => p.status === "neplatit").length;
 
@@ -53,30 +57,46 @@ const Dashboard = () => {
       </header>
 
       <section className="stats-grid">
-        <div className="stat-card"><div className="stat-value">{cereriActive}</div><div className="stat-label">Sesizări active</div></div>
-        <div className="stat-card"><div className="stat-value">{platiRestante}</div><div className="stat-label">Plăți restante</div></div>
-        <div className="stat-card"><div className="stat-value">{appointmentsCount}</div><div className="stat-label">Programări</div></div>
-        <div className="stat-card"><div className="stat-value">0</div><div className="stat-label">Notificări</div></div>
+        <div className="stat-card premium-stat">
+          <span>Sesizări active</span>
+          <div className="stat-value" style={{ color: "#ef4444", fontSize: "38px", fontWeight: "800", marginTop: "8px" }}>{cereriActive}</div>
+        </div>
+        <div className="stat-card premium-stat">
+          <span>Plăți restante</span>
+          <div className="stat-value" style={{ color: "#f59e0b", fontSize: "38px", fontWeight: "800", marginTop: "8px" }}>{platiRestante}</div>
+        </div>
+        <div className="stat-card premium-stat">
+          <span>Programări active</span>
+          <div className="stat-value" style={{ color: "#2563eb", fontSize: "38px", fontWeight: "800", marginTop: "8px" }}>{appointmentsCount}</div>
+        </div>
+        <div className="stat-card premium-stat">
+          <span>Notificări noi</span>
+          <div className="stat-value" style={{ color: unreadCount > 0 ? "#ef4444" : "#64748b", fontSize: "38px", fontWeight: "800", marginTop: "8px" }}>{unreadCount}</div>
+        </div>
       </section>
 
       <section className="dashboard-actions">
         <Link to="/ghiseu" className="dashboard-action">
-          <h1>Ghișeu virtual</h1>
-          <p className="meta-line">Rezolvă-ți cererile și plățile fără să părăsești casa.</p>
+          <div className="eyebrow" style={{ color: "#2563eb" }}>Documente</div>
+          <h2>Ghișeu virtual</h2>
+          <p className="meta-line">Depune cereri și obține acte online.</p>
         </Link>
         <Link to="/map" className="dashboard-action">
-          <h1>Hartă sesizări</h1>
-          <p className="meta-line">Raportează probleme pe hartă și urmărește statusul.</p>
+          <div className="eyebrow" style={{ color: "#ef4444" }}>Sesizări</div>
+          <h2>Hartă sesizări</h2>
+          <p className="meta-line">Raportează problemele din oraș.</p>
         </Link>
 
         <Link to="/appointments" className="dashboard-action">
-          <h1>Programări online</h1>
-          <p className="meta-line">Rezervă un slot la ghișeu fără telefon și fără cozi.</p>
+          <div className="eyebrow" style={{ color: "#f59e0b" }}>Programări</div>
+          <h2>Programări online</h2>
+          <p className="meta-line">Rezervă un loc la ghișeu.</p>
         </Link>
 
         <Link to="/payments" className="dashboard-action">
-          <h1>Plăți și taxe</h1>
-          <p className="meta-line">Achită-ți taxele locale rapid și securizat.</p>
+          <div className="eyebrow" style={{ color: "#16a34a" }}>Finanțe</div>
+          <h2>Plăți și taxe</h2>
+          <p className="meta-line">Achită-ți taxele locale rapid.</p>
         </Link>
       </section>
     </main>

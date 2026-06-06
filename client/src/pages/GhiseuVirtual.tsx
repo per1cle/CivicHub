@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 const CONFIG_CERERI = [
@@ -57,6 +57,25 @@ export default function GhiseuVirtual() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
 
+    const [requests, setRequests] = useState<any[]>([]);
+
+    const fetchRequests = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            const res = await fetch(`http://localhost:3001/api/requests/history?userId=${user.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setRequests(data);
+            }
+        } catch (err) {
+            console.error("Eroare la preluarea istoricului cererilor:", err);
+        }
+    }, [user?.id]);
+
+    useEffect(() => {
+        fetchRequests();
+    }, [fetchRequests]);
+
     const activeConfig = CONFIG_CERERI.find((c) => c.id === selectedRequestId);
 
     const handleSelectType = (id: string) => {
@@ -75,7 +94,6 @@ export default function GhiseuVirtual() {
         if (file) {
             setFileData((prev) => ({ ...prev, [id]: file }));
         } else {
-            // Dacă utilizatorul anulează selecția, scoatem fișierul din state
             const newFileData = { ...fileData };
             delete newFileData[id];
             setFileData(newFileData);
@@ -86,10 +104,10 @@ export default function GhiseuVirtual() {
         e.preventDefault();
         if (!activeConfig) return;
 
-        // Verificăm dacă toate fișierele obligatorii au fost încărcate
         const missingFiles = activeConfig.fileFields.filter(f => !fileData[f.id]);
         if (missingFiles.length > 0) {
             setError(`Te rugăm să atașezi toate documentele necesare. Lipsește: ${missingFiles[0].label}`);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             return;
         }
 
@@ -99,11 +117,9 @@ export default function GhiseuVirtual() {
 
         const formData = new FormData();
         formData.append("tip", activeConfig.name);
-        // Folosim email-ul utilizatorului logat. Dacă nu e logat, punem un fallback pentru siguranță în timpul testării
         formData.append("emailCetatean", user?.email || "test@test.ro");
         formData.append("dateCompletate", JSON.stringify(textData));
 
-        // Adăugăm toate fișierele cu cheia 'documente' pentru a fi prinse de Multer (.array('documente'))
         Object.values(fileData).forEach((file) => {
             if (file) {
                 formData.append("documente", file);
@@ -120,16 +136,19 @@ export default function GhiseuVirtual() {
 
             if (res.ok) {
                 setMessage(data.mesaj || "Dosarul a fost depus cu succes!");
-                // Resetăm formularul după succes
                 setTextData({});
                 setFileData({});
                 setSelectedRequestId("");
+                fetchRequests();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 setError(data.error || "A apărut o eroare la depunerea cererii.");
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         } catch (err) {
             console.error(err);
             setError("Eroare de conexiune cu serverul primăriei.");
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } finally {
             setLoading(false);
         }
@@ -167,7 +186,6 @@ export default function GhiseuVirtual() {
                         </div>
                     </div>
 
-                    {/* Folosim exact grid-ul tău din Appointments.tsx */}
                     <div className="appointment-service-grid" style={{ marginBottom: "40px" }}>
                         {CONFIG_CERERI.map((cerere) => (
                             <button
@@ -233,7 +251,7 @@ export default function GhiseuVirtual() {
                                             }}>
                                                 <input
                                                     type="file"
-                                                    required={!fileData[fileField.id]} // Este required doar dacă nu am încărcat deja
+                                                    required={!fileData[fileField.id]}
                                                     onChange={(e) => handleFileChange(fileField.id, e.target.files?.[0] || null)}
                                                     style={{
                                                         position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer"
@@ -255,7 +273,6 @@ export default function GhiseuVirtual() {
                     )}
                 </section>
 
-                {/* Partea dreaptă: Sumar și Buton Trimite */}
                 <aside className="side-panel appointment-side-panel">
                     <p className="eyebrow">Sumar</p>
                     <h2>Dosarul tău</h2>
@@ -309,6 +326,45 @@ export default function GhiseuVirtual() {
                         </>
                     )}
                 </aside>
+            </section>
+
+            {/* Secțiunea de Istoric Cereri - Adăugată cu noul design compatibil */}
+            <section className="appointments-history-card" style={{ marginTop: "40px" }}>
+                <div className="appointment-toolbar">
+                    <div>
+                        <p className="eyebrow">Urmărire Status</p>
+                        <h2>Cererile mele depuse</h2>
+                    </div>
+                </div>
+
+                {requests.length === 0 ? (
+                    <div className="empty-state">Nu ai depus încă nicio cerere prin ghișeul virtual.</div>
+                ) : (
+                    <div className="appointments-list">
+                        {requests.map((req) => (
+                            <article key={req.id} className="appointment-item">
+                                <div className="appointment-item-main">
+                                    <div className="appointment-date-badge">
+                                        <strong>{new Date(req.dataDepunere).getDate()}</strong>
+                                        <span>{new Date(req.dataDepunere).toLocaleDateString('ro-RO', { month: 'short' })}</span>
+                                    </div>
+
+                                    <div>
+                                        <h3>{req.tip}</h3>
+                                        <p>Depusă pe: {new Date(req.dataDepunere).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                                        <small>ID Cerere: #{req.id}</small>
+                                    </div>
+                                </div>
+
+                                <div className="appointment-actions">
+                                    <span className={`status-badge badge-${req.status === 'aprobat' ? 'rezolvat' : (req.status === 'respins' ? 'nou' : 'in-lucru')}`}>
+                                        {req.status === 'In asteptare' ? 'În așteptare' : req.status}
+                                    </span>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )}
             </section>
         </main>
     );

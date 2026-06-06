@@ -113,18 +113,11 @@ export default function ReportsMapAdmin() {
       <section className="hero-panel admin-hero">
         <div>
           <p className="eyebrow">CivicHub Admin</p>
-          <h1>Panou funcționar / Admin</h1>
+          <h1>Gestionare sesizări</h1>
           <p>
             Monitorizare sesizări, prioritizare intervenții, filtrare rapidă și
             actualizare status în timp real pentru cetățeni.
           </p>
-        </div>
-
-//de adaugat aici numele funcționarului
-        <div className="admin-profile">
-          <div>
-            <span>Funcționar public · Ghișeu digital</span>
-          </div>
         </div>
       </section>
 
@@ -151,32 +144,6 @@ export default function ReportsMapAdmin() {
           <span>Rezolvate</span>
           <strong>{stats.solved}</strong>
           <small>finalizate</small>
-        </article>
-      </section>
-
-      <section className="admin-command-grid">
-        <article className="admin-command-card">
-          <span className="command-icon danger">!</span>
-          <div>
-            <strong>{stats.urgent} sesizări urgente</strong>
-            <p>Prioritate ridicată, necesită intervenție rapidă.</p>
-          </div>
-        </article>
-
-        <article className="admin-command-card">
-          <span className="command-icon blue">↻</span>
-          <div>
-            <strong>{filteredReports.length} afișate după filtre</strong>
-            <p>Rezultatele se actualizează instant în hartă și listă.</p>
-          </div>
-        </article>
-
-        <article className="admin-command-card">
-          <span className="command-icon green">✓</span>
-          <div>
-            <strong>Sincronizat cu cetățenii</strong>
-            <p>Schimbarea statusului se vede automat în modulul de hartă.</p>
-          </div>
         </article>
       </section>
 
@@ -312,22 +279,22 @@ export default function ReportsMapAdmin() {
 
               <div className="report-meta-grid">
                 <div>
-                  <span>Cetățean</span>
+                  <span>Cetățean: </span>
                   <strong>{selectedReport.citizenName}</strong>
                 </div>
 
                 <div>
-                  <span>Categorie</span>
+                  <span>Categorie: </span>
                   <strong>{selectedReport.category}</strong>
                 </div>
 
                 <div>
-                  <span>Dată</span>
+                  <span>Dată: </span>
                   <strong>{selectedReport.createdAt}</strong>
                 </div>
 
                 <div>
-                  <span>Prioritate</span>
+                  <span>Prioritate: </span>
                   <strong className={priorityClass(selectedReport.priority)}>
                     {priorityLabel(selectedReport.priority)}
                   </strong>

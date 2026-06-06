@@ -19,6 +19,8 @@ model User {
   // Legături către profilurile specifice
   citizen   Citizen?
   official  Official?
+
+  notificari Notification[]
 }
 
 enum Role {
@@ -94,6 +96,7 @@ model Appointment { // Programare
   dataOra      DateTime
   serviciuAles String
   observatii   String?
+  status       String   @default("confirmata")
 
   // Relații
   citizenId    Int
@@ -112,4 +115,17 @@ model Payment {
 
   citizenId   Int
   citizen     Citizen @relation(fields: [citizenId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  type      String   // ex: "CERERE", "SESIZARE", "PLATA", "PROGRAMARE", "SISTEM"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relația cu utilizatorul (cetățean sau funcționar)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

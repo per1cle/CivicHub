@@ -25,7 +25,7 @@ const upload = multer({ storage: storage });
 
 router.post('/create', upload.array('documente', 10), createRequest);
 
-router.get('/history/:email', getUserRequests);
+router.get('/history', getUserRequests);
 
 router.get('/all', getAllRequests);
 router.patch('/:id/status', updateRequestStatus);

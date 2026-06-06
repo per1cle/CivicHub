@@ -19,12 +19,13 @@ export type Report = {
 
 const API_URL = "http://localhost:3001/api/reports";
 
-export function useReports() {
+export function useReports(userId?: number) {
   const [reports, setReports] = useState<Report[]>([]);
 
   async function fetchReports() {
     try {
-      const res = await fetch(API_URL);
+      const url = userId ? `${API_URL}?userId=${userId}` : API_URL;
+      const res = await fetch(url);
       const data = await res.json();
       setReports(data);
     } catch (err) {
@@ -34,7 +35,7 @@ export function useReports() {
 
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [userId]);
 
   const addReport = async (
     report: Omit<Report, "citizenName" | "createdAt">
@@ -45,7 +46,7 @@ export function useReports() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(report),
+        body: JSON.stringify({ ...report, userId }),
       });
 
       const data = await res.json();

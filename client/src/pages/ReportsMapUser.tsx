@@ -9,6 +9,7 @@ import {
 import L from "leaflet";
 import { useReports } from "../store/useReports";
 import type { ReportStatus, ReportPriority } from "../store/useReports";
+import { useAuth } from "../context/AuthContext";
 
 const categories = [
   "Drumuri",
@@ -75,7 +76,8 @@ function createMarkerIcon(status: ReportStatus) {
 }
 
 export default function ReportsMapUser() {
-  const { reports, addReport } = useReports();
+  const { user } = useAuth();
+  const { reports, addReport } = useReports(user?.id);
 
   const [selected, setSelected] = useState<{ lat: number; lng: number } | null>(null);
   const [title, setTitle] = useState("");
@@ -87,7 +89,6 @@ export default function ReportsMapUser() {
   const [statusFilter, setStatusFilter] = useState<"toate" | ReportStatus>("toate");
   const [categoryFilter, setCategoryFilter] = useState("toate");
   const [search, setSearch] = useState("");
-  const [darkMap, setDarkMap] = useState(false);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -116,34 +117,36 @@ export default function ReportsMapUser() {
   );
 
   const handleAdd = async () => {
-  if (!selected || !title.trim()) {
-    setMessage("Alege o locație pe hartă și completează descrierea.");
-    return;
-  }
+    if (!selected || !title.trim()) {
+      setMessage("⚠️ Alege o locație pe hartă și completează descrierea.");
+      return;
+    }
 
-  const result = await addReport({
-    id: Date.now(),
-    title: title.trim(),
-    lat: selected.lat,
-    lng: selected.lng,
-    status: "nou",
-    category,
-    priority,
-    image,
-  });
+    const result = await addReport({
+      id: Date.now(),
+      title: title.trim(),
+      lat: selected.lat,
+      lng: selected.lng,
+      status: "nou",
+      category,
+      priority,
+      image,
+    });
 
-  if (!result?.success) {
-    setMessage(result?.message || "Sesizarea nu a putut fi trimisă.");
-    return;
-  }
+    if (!result?.success) {
+      setMessage("❌ " + (result?.message || "Sesizarea nu a putut fi trimisă."));
+      return;
+    }
 
-  setTitle("");
-  setCategory(categories[0]);
-  setPriority("medie");
-  setImage(undefined);
-  setSelected(null);
-  setMessage("Sesizarea a fost trimisă cu succes către primărie.");
-};
+    setTitle("");
+    setCategory(categories[0]);
+    setPriority("medie");
+    setImage(undefined);
+    setSelected(null);
+    setMessage("✅ Sesizarea a fost trimisă cu succes către primărie! Poți urmări statusul ei direct pe hartă.");
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const resetFilters = () => {
     setStatusFilter("toate");
@@ -164,16 +167,23 @@ export default function ReportsMapUser() {
         </div>
 
         <div className="hero-actions">
-          <button className="map-mode-btn" onClick={() => setDarkMap(!darkMap)}>
-            {darkMap ? "Hartă light" : "Hartă dark"}
-          </button>
-
           <span className="live-pill">
             <span></span>
             Sistem activ
           </span>
         </div>
       </section>
+
+      {message && (
+        <div className="appointment-toast" style={{ 
+          background: message.startsWith('✅') ? "#dcfce7" : "#fee2e2", 
+          color: message.startsWith('✅') ? "#166534" : "#991b1b",
+          border: message.startsWith('✅') ? "1px solid #bbf7d0" : "1px solid #fecaca",
+          marginBottom: "24px"
+        }}>
+          {message}
+        </div>
+      )}
 
       <section className="stats-grid">
         <article className="stat-card premium-stat">
@@ -259,11 +269,7 @@ export default function ReportsMapUser() {
           >
             <TileLayer
               attribution="&copy; OpenStreetMap"
-              url={
-                darkMap
-                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              }
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
             <ClickHandler onClick={(lat, lng) => setSelected({ lat, lng })} />
@@ -313,8 +319,6 @@ export default function ReportsMapUser() {
         <aside className="side-panel">
           <p className="eyebrow">Sesizare nouă</p>
           <h2>Raportează o problemă</h2>
-
-          {message && <div className="notice-box">{message}</div>}
 
           <div className="form-group">
             <label>Descriere problemă</label>

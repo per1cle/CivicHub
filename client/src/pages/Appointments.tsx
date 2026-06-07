@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useAuth } from "../context/AuthContext";
 
 type AppointmentStatus = "confirmata" | "anulata";
 
@@ -36,7 +37,10 @@ const services = [
   },
 ];
 
-const allSlots = ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00"];
+const allSlots = [
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", 
+  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00"
+];
 
 const monthNames = [
   "Ianuarie",
@@ -108,11 +112,12 @@ function mapAppointmentFromBackend(item: any): Appointment {
     time: dateObj.toTimeString().slice(0, 5),
     service: item.serviciuAles,
     notes: item.observatii || "",
-    status: "confirmata",
+    status: item.status || "confirmata",
   };
 }
 
 export default function Appointments() {
+  const { user } = useAuth();
   const today = new Date();
 
   const [currentMonth, setCurrentMonth] = useState(
@@ -125,9 +130,10 @@ export default function Appointments() {
   const [message, setMessage] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
-  async function fetchAppointments() {
+  const fetchAppointments = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(`${API_URL}?userId=${user.id}`);
       const data = await res.json();
 
       setAppointments(data.map(mapAppointmentFromBackend));
@@ -135,11 +141,11 @@ export default function Appointments() {
       console.error(err);
       setMessage("Nu s-au putut încărca programările.");
     }
-  }
+  }, [user?.id]);
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [fetchAppointments]);
 
   const selectedDateKey = formatDateKey(selectedDate);
 
@@ -180,72 +186,82 @@ export default function Appointments() {
   };
 
   const handleBook = async () => {
-  if (!selectedTime) {
-    setMessage("Alege o oră disponibilă pentru programare.");
-    return;
-  }
-
-  if (bookedSlots.includes(selectedTime)) {
-    setMessage("Acest slot este deja ocupat. Alege altă oră.");
-    return;
-  }
-
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        date: selectedDateKey,
-        time: selectedTime,
-        service: selectedService,
-        notes: notes.trim(),
-        citizenId: 1,
-      }),
-    });
-
-    const data = await res.json();
-    console.log("Răspuns backend:", data);
-
-    if (!res.ok) {
-      setMessage(data.message || "Programarea nu a putut fi salvată.");
+    if (!selectedTime) {
+      setMessage("⚠️ Alege o oră disponibilă pentru programare.");
       return;
     }
 
-    await fetchAppointments();
+    if (bookedSlots.includes(selectedTime)) {
+      setMessage("⚠️ Acest slot este deja ocupat. Alege altă oră.");
+      return;
+    }
 
-    setSelectedTime("");
-    setNotes("");
-    setMessage(`Programare confirmată pentru ${selectedService}, ora ${selectedTime}.`);
-  } catch (err) {
-    console.error("Eroare frontend:", err);
-    setMessage("Programarea nu a putut fi salvată.");
-  }
-};
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: selectedDateKey,
+          time: selectedTime,
+          service: selectedService,
+          notes: notes.trim(),
+          userId: user?.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage("❌ " + (data.message || "Programarea nu a putut fi salvată."));
+        return;
+      }
+
+      await fetchAppointments();
+
+      setSelectedTime("");
+      setNotes("");
+      setMessage(`✅ Programare confirmată pentru ${selectedService}, pe data de ${formatHumanDate(selectedDateKey)}, la ora ${selectedTime}. Vei primi un email de confirmare.`);
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      console.error("Eroare frontend:", err);
+      setMessage("❌ Programarea nu a putut fi salvată.");
+    }
+  };
 
   const cancelAppointment = async (id: number) => {
     try {
-      await fetch(`${API_URL}/${id}`, {
+      const res = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
       });
 
+      if (!res.ok) {
+        setMessage("❌ Programarea nu a putut fi anulată.");
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       await fetchAppointments();
-      setMessage("Programarea a fost anulată.");
+      setMessage("✅ Programarea a fost anulată cu succes.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error(err);
-      setMessage("Programarea nu a putut fi anulată.");
+      setMessage("❌ Programarea nu a putut fi anulată.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const rescheduleAppointment = async (id: number) => {
     if (!selectedTime) {
-      setMessage("Pentru reprogramare, selectează mai întâi o oră disponibilă.");
+      setMessage("⚠️ Pentru reprogramare, te rugăm să alegi mai întâi o NOUĂ DATĂ și o ORĂ din calendarul de mai sus, apoi apasă din nou pe 'Reprogramează'.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
     try {
-      await fetch(`${API_URL}/${id}`, {
+      const res = await fetch(`${API_URL}/${id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -258,13 +274,21 @@ export default function Appointments() {
         }),
       });
 
+      if (!res.ok) {
+        setMessage("❌ Programarea nu a putut fi reprogramată.");
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
       await fetchAppointments();
 
       setSelectedTime("");
-      setMessage("Programarea a fost reprogramată pe data și ora selectate.");
+      setMessage(`✅ Programarea a fost mutată cu succes pe data de ${formatHumanDate(selectedDateKey)}, la ora ${selectedTime}.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error(err);
-      setMessage("Programarea nu a putut fi reprogramată.");
+      setMessage("❌ Programarea nu a putut fi reprogramată.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -314,7 +338,16 @@ export default function Appointments() {
         </article>
       </section>
 
-      {message && <div className="appointment-toast">{message}</div>}
+      {message && (
+        <div className="appointment-toast" style={{ 
+          background: message.startsWith('✅') ? "#dcfce7" : "#fee2e2", 
+          color: message.startsWith('✅') ? "#166534" : "#991b1b",
+          border: message.startsWith('✅') ? "1px solid #bbf7d0" : "1px solid #fecaca",
+          marginBottom: "24px"
+        }}>
+          {message}
+        </div>
+      )}
 
       <section className="appointments-layout">
         <section className="appointment-main-card">
@@ -341,22 +374,26 @@ export default function Appointments() {
           <div className="premium-calendar">
             {calendarDays.map((day, index) => {
               const isPast = day ? day < new Date(today.toDateString()) : false;
+              const isWeekend = day ? (day.getDay() === 0 || day.getDay() === 6) : false;
               const dayKey = day ? formatDateKey(day) : "";
               const hasAppointment = activeAppointments.some((a) => a.date === dayKey);
               const isSelected = day ? isSameDay(day, selectedDate) : false;
 
+              const isDisabled = !day || isPast || isWeekend;
+
               return (
                 <button
                   key={index}
-                  disabled={!day || isPast}
+                  disabled={isDisabled}
                   className={[
                     "calendar-day",
                     isSelected ? "selected" : "",
                     hasAppointment ? "has-appointment" : "",
-                    isPast ? "disabled" : "",
+                    isDisabled ? "disabled" : "",
+                    isWeekend ? "weekend" : "",
                   ].join(" ")}
                   onClick={() => {
-                    if (!day) return;
+                    if (!day || isWeekend) return;
                     setSelectedDate(day);
                     setSelectedTime("");
                   }}
@@ -365,6 +402,7 @@ export default function Appointments() {
                     <>
                       <strong>{day.getDate()}</strong>
                       {hasAppointment && <small>ocupat</small>}
+                      {isWeekend && <small style={{ opacity: 0.5 }}>închis</small>}
                     </>
                   )}
                 </button>
@@ -379,26 +417,31 @@ export default function Appointments() {
             </div>
 
             <div className="slot-grid premium-slot-grid">
-              {allSlots.map((slot) => {
-                const booked = bookedSlots.includes(slot);
-                const selected = selectedTime === slot;
+              {allSlots
+                .filter((slot) => !bookedSlots.includes(slot))
+                .map((slot) => {
+                  const selected = selectedTime === slot;
 
-                return (
-                  <button
-                    key={slot}
-                    disabled={booked}
-                    onClick={() => setSelectedTime(slot)}
-                    className={[
-                      "slot-btn",
-                      booked ? "booked" : "",
-                      selected ? "selected" : "",
-                    ].join(" ")}
-                  >
-                    <strong>{slot}</strong>
-                    <small>{booked ? "ocupat" : selected ? "selectat" : "liber"}</small>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={slot}
+                      onClick={() => setSelectedTime(slot)}
+                      className={[
+                        "slot-btn",
+                        selected ? "selected" : "",
+                      ].join(" ")}
+                    >
+                      <strong>{slot}</strong>
+                      <small>{selected ? "selectat" : "liber"}</small>
+                    </button>
+                  );
+                })}
+
+              {allSlots.filter((slot) => !bookedSlots.includes(slot)).length === 0 && (
+                <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "1rem", color: "#64748b" }}>
+                  Nu mai sunt locuri disponibile pentru această zi.
+                </div>
+              )}
             </div>
           </div>
         </section>

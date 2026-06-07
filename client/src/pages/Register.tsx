@@ -1,6 +1,6 @@
 // src/pages/Register.tsx
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
@@ -14,8 +14,15 @@ const Register = () => {
   
   const [eroare, setEroare] = useState('');
   
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  if (user) {
+    if (user.role === 'ADMIN') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,10 +45,12 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Dacă înregistrarea are succes, backend-ul ne trimite direct token-ul
-        // Așa că îl logăm automat pe utilizator și îl trimitem pe Dashboard
         login(data.user, data.token);
-        navigate('/dashboard');
+        if (data.user.role === 'ADMIN') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setEroare(data.error || "A apărut o eroare la crearea contului.");
       }
@@ -51,47 +60,53 @@ const Register = () => {
   };
 
   return (
-    <div>
-      <h2>Creare Cont CivicHub</h2>
-      {eroare && <p style={{ color: 'red' }}>{eroare}</p>}
-      
-      <form onSubmit={handleRegister}>
-        <div>
-          <label>Nume:</label>
-          <input type="text" value={nume} onChange={(e) => setNume(e.target.value)} required />
-        </div>
+    <div className="auth-page">
+      <div className="auth-card auth-card-large">
+        <h2>Creare Cont</h2>
+        <p className="subtitle">Alătură-te comunității CivicHub</p>
+
+        {eroare && <div className="auth-error">{eroare}</div>}
         
-        <div>
-          <label>Prenume:</label>
-          <input type="text" value={prenume} onChange={(e) => setPrenume(e.target.value)} required />
-        </div>
+        <form onSubmit={handleRegister}>
+          <div className="auth-form-grid">
+            <div className="form-group text-left">
+              <label>Nume</label>
+              <input type="text" value={nume} onChange={(e) => setNume(e.target.value)} placeholder="Popescu" required />
+            </div>
+            
+            <div className="form-group text-left">
+              <label>Prenume</label>
+              <input type="text" value={prenume} onChange={(e) => setPrenume(e.target.value)} placeholder="Ion" required />
+            </div>
+          </div>
 
-        <div>
-          <label>Email:</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
+          <div className="form-group text-left">
+            <label>Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ion.popescu@exemplu.ro" required />
+          </div>
 
-        <div>
-          <label>Parolă:</label>
-          <input type="password" value={parola} onChange={(e) => setParola(e.target.value)} required />
-        </div>
+          <div className="form-group text-left">
+            <label>Parolă</label>
+            <input type="password" value={parola} onChange={(e) => setParola(e.target.value)} placeholder="••••••••" required />
+          </div>
 
-        <div>
-          <label>Adresă completă:</label>
-          <input type="text" value={adresa} onChange={(e) => setAdresa(e.target.value)} required />
-        </div>
+          <div className="form-group text-left">
+            <label>Adresă completă</label>
+            <input type="text" value={adresa} onChange={(e) => setAdresa(e.target.value)} placeholder="Str. Primăverii nr. 10, București" required />
+          </div>
 
-        <div>
-          <label>Telefon:</label>
-          <input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} required />
-        </div>
+          <div className="form-group text-left">
+            <label>Telefon</label>
+            <input type="tel" value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="07XX XXX XXX" required />
+          </div>
 
-        <button type="submit" style={{ marginTop: '15px' }}>Creează contul</button>
-      </form>
-      
-      <p style={{ marginTop: '20px' }}>
-        Ai deja cont? <button onClick={() => navigate('/login')}>Mergi la Login</button>
-      </p>
+          <button type="submit" className="auth-btn">Creează contul</button>
+        </form>
+        
+        <p className="auth-link">
+          Ai deja cont? <button onClick={() => navigate('/login')}>Mergi la Login</button>
+        </p>
+      </div>
     </div>
   );
 };

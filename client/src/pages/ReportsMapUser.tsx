@@ -9,6 +9,7 @@ import {
 import L from "leaflet";
 import { useReports } from "../store/useReports";
 import type { ReportStatus, ReportPriority } from "../store/useReports";
+import { useAuth } from "../context/AuthContext";
 
 const categories = [
   "Drumuri",
@@ -25,8 +26,6 @@ const priorities: { label: string; value: ReportPriority }[] = [
   { label: "Ridicată", value: "ridicata" },
 ];
 
-//aici se extrag coordonatele concrete atunci cand e apasata harta
-//coordonatele selectate sunt salvate in: selected
 function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
@@ -77,7 +76,8 @@ function createMarkerIcon(status: ReportStatus) {
 }
 
 export default function ReportsMapUser() {
-  const { reports, addReport } = useReports();
+  const { user } = useAuth();
+  const { reports, addReport } = useReports(user?.id);
 
   const [selected, setSelected] = useState<{ lat: number; lng: number } | null>(null);
   const [title, setTitle] = useState("");
@@ -89,7 +89,6 @@ export default function ReportsMapUser() {
   const [statusFilter, setStatusFilter] = useState<"toate" | ReportStatus>("toate");
   const [categoryFilter, setCategoryFilter] = useState("toate");
   const [search, setSearch] = useState("");
-  const [darkMap, setDarkMap] = useState(false);
 
   const filteredReports = useMemo(() => {
     return reports.filter((report) => {
@@ -117,39 +116,37 @@ export default function ReportsMapUser() {
     [reports, filteredReports.length]
   );
 
-  //aici are loc trimiterea sesizrii
   const handleAdd = async () => {
-  //nu lasa utilizatorul sa trimita sesizarea daca nu a ales o locatie
-  //sau nu a completat descrierea
-  if (!selected || !title.trim()) {
-    setMessage("Alege o locație pe hartă și completează descrierea.");
-    return;
-  }
+    if (!selected || !title.trim()) {
+      setMessage("⚠️ Alege o locație pe hartă și completează descrierea.");
+      return;
+    }
 
-  //prin await see face legatura catre backend
-  const result = await addReport({
-    id: Date.now(),
-    title: title.trim(),
-    lat: selected.lat,
-    lng: selected.lng,
-    status: "nou",
-    category,
-    priority,
-    image,
-  });
+    const result = await addReport({
+      id: Date.now(),
+      title: title.trim(),
+      lat: selected.lat,
+      lng: selected.lng,
+      status: "nou",
+      category,
+      priority,
+      image,
+    });
 
-  if (!result?.success) {
-    setMessage(result?.message || "Sesizarea nu a putut fi trimisă.");
-    return;
-  }
+    if (!result?.success) {
+      setMessage("❌ " + (result?.message || "Sesizarea nu a putut fi trimisă."));
+      return;
+    }
 
-  setTitle("");
-  setCategory(categories[0]);
-  setPriority("medie");
-  setImage(undefined);
-  setSelected(null);
-  setMessage("Sesizarea a fost trimisă cu succes către primărie.");
-};
+    setTitle("");
+    setCategory(categories[0]);
+    setPriority("medie");
+    setImage(undefined);
+    setSelected(null);
+    setMessage("✅ Sesizarea a fost trimisă cu succes către primărie!");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const resetFilters = () => {
     setStatusFilter("toate");
@@ -170,16 +167,28 @@ export default function ReportsMapUser() {
         </div>
 
         <div className="hero-actions">
-          <button className="map-mode-btn" onClick={() => setDarkMap(!darkMap)}>
-            {darkMap ? "Hartă light" : "Hartă dark"}
-          </button>
-
           <span className="live-pill">
             <span></span>
             Sistem activ
           </span>
         </div>
       </section>
+
+      {message && (
+        <div
+          className="appointment-toast"
+          style={{
+            background: message.startsWith("✅") ? "#dcfce7" : "#fee2e2",
+            color: message.startsWith("✅") ? "#166534" : "#991b1b",
+            border: message.startsWith("✅")
+              ? "1px solid #bbf7d0"
+              : "1px solid #fecaca",
+            marginBottom: "24px",
+          }}
+        >
+          {message}
+        </div>
+      )}
 
       <section className="stats-grid">
         <article className="stat-card premium-stat">
@@ -208,10 +217,11 @@ export default function ReportsMapUser() {
       </section>
 
       {reports.some((r) => r.status === "rezolvat") && (
-      <div className="appointment-toast">
-        Ai sesizări rezolvate recent. Acestea vor dispărea automat din cont în 24 de ore.
-      </div>
-    )}
+        <div className="appointment-toast">
+          Ai sesizări rezolvate recent. Acestea vor dispărea automat din cont în
+          24 de ore.
+        </div>
+      )}
 
       <section className="map-layout">
         <div className="map-shell">
@@ -222,9 +232,15 @@ export default function ReportsMapUser() {
             </div>
 
             <div className="map-legend">
-              <span><i className="dot red"></i> Nou</span>
-              <span><i className="dot amber"></i> În lucru</span>
-              <span><i className="dot green"></i> Rezolvat</span>
+              <span>
+                <i className="dot red"></i> Nou
+              </span>
+              <span>
+                <i className="dot amber"></i> În lucru
+              </span>
+              <span>
+                <i className="dot green"></i> Rezolvat
+              </span>
             </div>
           </div>
 
@@ -237,7 +253,9 @@ export default function ReportsMapUser() {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "toate" | ReportStatus)}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "toate" | ReportStatus)
+              }
             >
               <option value="toate">Toate statusurile</option>
               <option value="nou">Nou</option>
@@ -265,17 +283,16 @@ export default function ReportsMapUser() {
           >
             <TileLayer
               attribution="&copy; OpenStreetMap"
-              url={
-                darkMap
-                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              }
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
             <ClickHandler onClick={(lat, lng) => setSelected({ lat, lng })} />
 
             {selected && (
-              <Marker position={[selected.lat, selected.lng]} icon={createMarkerIcon("nou")}>
+              <Marker
+                position={[selected.lat, selected.lng]}
+                icon={createMarkerIcon("nou")}
+              >
                 <Popup>
                   <div className="popup-card">
                     <strong>Locație selectată</strong>
@@ -287,12 +304,20 @@ export default function ReportsMapUser() {
             )}
 
             {filteredReports.map((r) => (
-              <Marker key={r.id} position={[r.lat, r.lng]} icon={createMarkerIcon(r.status)}>
+              <Marker
+                key={r.id}
+                position={[r.lat, r.lng]}
+                icon={createMarkerIcon(r.status)}
+              >
                 <Popup>
                   <div className="popup-card">
                     <div className="popup-header">
-                      <span className={statusClass(r.status)}>{statusLabel(r.status)}</span>
-                      <span className={priorityClass(r.priority)}>{priorityLabel(r.priority)}</span>
+                      <span className={statusClass(r.status)}>
+                        {statusLabel(r.status)}
+                      </span>
+                      <span className={priorityClass(r.priority)}>
+                        {priorityLabel(r.priority)}
+                      </span>
                     </div>
 
                     <strong>{r.title}</strong>
@@ -308,7 +333,9 @@ export default function ReportsMapUser() {
                       <strong>{r.createdAt}</strong>
                     </div>
 
-                    {r.image && <img src={r.image} alt="Sesizare" className="popup-img" />}
+                    {r.image && (
+                      <img src={r.image} alt="Sesizare" className="popup-img" />
+                    )}
                   </div>
                 </Popup>
               </Marker>
@@ -319,8 +346,6 @@ export default function ReportsMapUser() {
         <aside className="side-panel">
           <p className="eyebrow">Sesizare nouă</p>
           <h2>Raportează o problemă</h2>
-
-          {message && <div className="notice-box">{message}</div>}
 
           <div className="form-group">
             <label>Descriere problemă</label>
@@ -347,7 +372,11 @@ export default function ReportsMapUser() {
                 <button
                   key={p.value}
                   type="button"
-                  className={priority === p.value ? "priority-choice active" : "priority-choice"}
+                  className={
+                    priority === p.value
+                      ? "priority-choice active"
+                      : "priority-choice"
+                  }
                   onClick={() => setPriority(p.value)}
                 >
                   {p.label}
@@ -378,7 +407,9 @@ export default function ReportsMapUser() {
             {selected ? (
               <>
                 <strong>Locație selectată</strong>
-                <span>{selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}</span>
+                <span>
+                  {selected.lat.toFixed(5)}, {selected.lng.toFixed(5)}
+                </span>
               </>
             ) : (
               <>
@@ -405,12 +436,18 @@ export default function ReportsMapUser() {
               <article key={r.id} className="recent-item pro-recent-item">
                 <div>
                   <strong>{r.title}</strong>
-                  <span>{r.category} · {r.createdAt}</span>
+                  <span>
+                    {r.category} · {r.createdAt}
+                  </span>
                 </div>
 
                 <div className="badge-column">
-                  <span className={statusClass(r.status)}>{statusLabel(r.status)}</span>
-                  <span className={priorityClass(r.priority)}>{priorityLabel(r.priority)}</span>
+                  <span className={statusClass(r.status)}>
+                    {statusLabel(r.status)}
+                  </span>
+                  <span className={priorityClass(r.priority)}>
+                    {priorityLabel(r.priority)}
+                  </span>
                 </div>
               </article>
             ))}

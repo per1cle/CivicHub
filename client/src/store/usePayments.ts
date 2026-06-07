@@ -31,12 +31,13 @@ function mapPaymentFromBackend(item: any): Payment {
   };
 }
 
-export function usePayments() {
+export function usePayments(userId?: number) {
   const [payments, setPayments] = useState<Payment[]>([]);
 
   async function fetchPayments() {
     try {
-      const res = await fetch(API_URL);
+      const url = userId ? `${API_URL}?userId=${userId}` : API_URL;
+      const res = await fetch(url);
       const data = await res.json();
 
       setPayments(data.map(mapPaymentFromBackend));
@@ -47,7 +48,7 @@ export function usePayments() {
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [userId]);
 
   const pay = async (id: number) => {
     try {

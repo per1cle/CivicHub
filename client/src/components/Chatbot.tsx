@@ -1,170 +1,170 @@
 import { useState } from "react";
 
 type Message = {
-  from: "user" | "bot";
+  role: "bot" | "user";
   text: string;
 };
 
 export default function Chatbot() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
+
   const [messages, setMessages] = useState<Message[]>([
     {
-      from: "bot",
-      text: "Salut! Sunt asistentul CivicHub. Te pot ajuta cu programări, plăți, raportări sau contul tău.",
+      role: "bot",
+      text: "Salut! Sunt asistentul CivicHub. Te pot ajuta cu programări, plăți, raportări, hartă sau contul tău.",
     },
   ]);
 
-  function getBotReply(message: string) {
-    const msg = message.toLowerCase();
+  const getBotReply = (text: string) => {
+    const q = text.toLowerCase();
 
-    if (msg.includes("salut") || msg.includes("bună") || msg.includes("buna")) {
-      return "Salut! Spune-mi cu ce ai nevoie de ajutor în CivicHub.";
-    }
-
-    if (msg.includes("programare") || msg.includes("programari") || msg.includes("appointment")) {
-      return "Pentru programări, intră în pagina „Programări”. Acolo poți vedea sau crea o programare.";
-    }
-
-    if (msg.includes("plata") || msg.includes("plăți") || msg.includes("taxa") || msg.includes("taxe")) {
-      return "Pentru plăți, mergi în pagina „Plăți”. Acolo poți verifica taxele și plățile disponibile.";
+    if (
+      q.includes("sesizare") ||
+      q.includes("sesizari") ||
+      q.includes("sesizări") ||
+      q.includes("raportare") ||
+      q.includes("raportări") ||
+      q.includes("raportez") ||
+      q.includes("problema") ||
+      q.includes("problemă") ||
+      q.includes("harta") ||
+      q.includes("hartă")
+    ) {
+      return "Pentru a face o sesizare, mergi la secțiunea Hartă, apasă pe locația problemei, completează descrierea, alege categoria și prioritatea, apoi apasă pe Trimite sesizarea.";
     }
 
     if (
-      msg.includes("raportare") ||
-      msg.includes("raportez") ||
-      msg.includes("problemă") ||
-      msg.includes("problema") ||
-      msg.includes("hartă") ||
-      msg.includes("harta")
+      q.includes("programare") ||
+      q.includes("programări") ||
+      q.includes("programari")
     ) {
-      return "Pentru raportarea unei probleme, intră în pagina „Hartă” și adaugă locația problemei.";
+      return "Pentru o programare, intră în secțiunea Programări, alege serviciul dorit, selectează data și ora disponibile, apoi confirmă programarea.";
     }
 
     if (
-      msg.includes("cont") ||
-      msg.includes("login") ||
-      msg.includes("register") ||
-      msg.includes("înregistrare") ||
-      msg.includes("inregistrare")
+      q.includes("plata") ||
+      q.includes("plată") ||
+      q.includes("plati") ||
+      q.includes("plăți") ||
+      q.includes("taxa") ||
+      q.includes("taxe")
     ) {
-      return "Pentru cont, poți folosi paginile Login sau Register. Dacă nu ai cont, trebuie să te înregistrezi.";
+      return "Pentru plăți, intră în secțiunea Plăți. Acolo poți vedea taxele disponibile, suma, termenul limită și statusul plății.";
     }
 
-    if (msg.includes("mulțumesc") || msg.includes("multumesc") || msg.includes("mersi")) {
-      return "Cu drag! Mai ai nevoie de altceva?";
+    if (
+      q.includes("cont") ||
+      q.includes("login") ||
+      q.includes("autentificare") ||
+      q.includes("inregistrare") ||
+      q.includes("înregistrare")
+    ) {
+      return "Pentru cont, folosește pagina de Login sau Înregistrare. După autentificare, vei avea acces la dashboard și funcționalitățile CivicHub.";
     }
 
-    return "Încă nu știu să răspund la asta. Mă poți întreba despre programări, plăți, raportări, hartă sau cont.";
-  }
+    if (
+      q.includes("ghiseu") ||
+      q.includes("ghișeu") ||
+      q.includes("document") ||
+      q.includes("cerere")
+    ) {
+      return "Pentru documente sau cereri, intră în secțiunea Ghișeu Virtual. Acolo poți completa și trimite cereri către primărie.";
+    }
 
-  function sendMessage() {
+    if (
+      q.includes("salut") ||
+      q.includes("bună") ||
+      q.includes("buna") ||
+      q.includes("hello")
+    ) {
+      return "Salut! Te pot ajuta cu sesizări, programări, plăți, ghișeu virtual sau contul tău CivicHub.";
+    }
+
+    if (
+  q.includes("mulțumesc") ||
+  q.includes("multumesc") ||
+  q.includes("mersi") ||
+  q.includes("ms") ||
+  q.includes("thanks")
+) {
+  return "Cu drag! Sunt aici dacă mai ai nevoie de ajutor în CivicHub.";
+}
+
+    return "Încă nu știu să răspund la asta. Mă poți întreba despre sesizări, programări, plăți, ghișeu virtual, hartă sau cont.";
+  };
+
+  const sendMessage = () => {
     if (!input.trim()) return;
 
-    const userMessage: Message = { from: "user", text: input };
-    const botMessage: Message = {
-      from: "bot",
-      text: getBotReply(input),
-    };
+    const userText = input.trim();
 
-    setMessages((prev) => [...prev, userMessage, botMessage]);
+    setMessages((prev) => [...prev, { role: "user", text: userText }]);
     setInput("");
-  }
+
+    setTimeout(() => {
+      const botReply = getBotReply(userText);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text: botReply,
+        },
+      ]);
+    }, 350);
+  };
 
   return (
     <>
-      {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            width: "60px",
-            height: "60px",
-            borderRadius: "50%",
-            border: "none",
-            background: "#2563eb",
-            color: "white",
-            fontSize: "26px",
-            cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-            zIndex: 9999,
-          }}
-        >
+      {!open && (
+        <button className="chatbot-toggle" onClick={() => setOpen(true)}>
           💬
         </button>
       )}
 
-      {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            width: "340px",
-            background: "white",
-            border: "1px solid #ddd",
-            borderRadius: "14px",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
-            padding: "12px",
-            zIndex: 9999,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <h3 style={{ marginTop: 0 }}>Chatbot CivicHub</h3>
-            <button onClick={() => setIsOpen(false)}>✕</button>
+      {open && (
+        <div className="chatbot-window">
+          <div className="chatbot-header">
+            <strong>Chatbot CivicHub</strong>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                fontSize: "22px",
+                cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
           </div>
 
-          <div
-            style={{
-              height: "260px",
-              overflowY: "auto",
-              marginBottom: "10px",
-              border: "1px solid #eee",
-              padding: "8px",
-              borderRadius: "8px",
-            }}
-          >
-            {messages.map((m, index) => (
-              <div
-                key={index}
-                style={{
-                  textAlign: m.from === "user" ? "right" : "left",
-                  marginBottom: "8px",
-                }}
-              >
-                <span
-                  style={{
-                    display: "inline-block",
-                    padding: "8px",
-                    borderRadius: "8px",
-                    maxWidth: "85%",
-                    background: m.from === "user" ? "#2563eb" : "#f1f5f9",
-                    color: m.from === "user" ? "white" : "black",
-                  }}
-                >
-                  {m.text}
-                </span>
+          <div className="chatbot-messages">
+            {messages.map((message, index) => (
+              <div key={index} className={`chatbot-message ${message.role}`}>
+                {message.text}
               </div>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: "6px" }}>
+          <div className="chatbot-input">
             <input
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
               placeholder="Scrie un mesaj..."
-              style={{
-                flex: 1,
-                padding: "8px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  sendMessage();
+                }
               }}
             />
 
-            <button onClick={sendMessage}>Trimite</button>
+            <button type="button" onClick={sendMessage}>
+              Trimite
+            </button>
           </div>
         </div>
       )}

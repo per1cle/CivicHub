@@ -1,29 +1,43 @@
 import { Router } from "express";
 import prisma from "../lib/prisma.js";
+import { sendNotification } from "../services/notificationService.js";
 
 const router = Router();
 
 router.get("/", async (req, res) => {
   try {
+    const { userId } = req.query;
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-const reports = await prisma.report.findMany({
-  where: {
-    OR: [
-      { status: { not: "rezolvat" } },
-      { resolvedAt: null },
-      { resolvedAt: { gte: yesterday } },
-    ],
-  },
-  include: {
-    citizen: {
+    const whereClause: any = {
+      AND: [
+        {
+          OR: [
+            { status: { not: "rezolvat" } },
+            { resolvedAt: null },
+            { resolvedAt: { gte: yesterday } },
+          ],
+        }
+      ]
+    };
+
+    // Aplicăm filtrul de user DOAR dacă avem un ID valid
+    const parsedUserId = userId ? Number(userId) : NaN;
+    if (!isNaN(parsedUserId)) {
+      whereClause.AND.push({ citizen: { userId: parsedUserId } });
+    }
+
+    const reports = await prisma.report.findMany({
+      where: whereClause,
       include: {
-        user: true,
+        citizen: {
+          include: {
+            user: true,
+          },
+        },
       },
-    },
-  },
-  orderBy: { id: "desc" },
-});
+      orderBy: { id: "desc" },
+    });
 
     const mappedReports = reports.map((report) => {
       const [lat, lng] = report.coordonateGPS.split(",").map(Number);
@@ -52,7 +66,17 @@ const reports = await prisma.report.findMany({
 
 router.post("/", async (req, res) => {
   try {
-    const { title, lat, lng, category, image } = req.body;
+    const { title, lat, lng, category, image, citizenId, userId } = req.body;
+
+    let finalCitizenId = citizenId ? Number(citizenId) : null;
+
+    // Dacă nu avem citizenId dar avem userId, căutăm automat cetățeanul
+    if (!finalCitizenId && userId) {
+      const citizen = await prisma.citizen.findUnique({
+        where: { userId: Number(userId) }
+      });
+      if (citizen) finalCitizenId = citizen.id;
+    }
 
     const report = await prisma.report.create({
       data: {
@@ -61,7 +85,7 @@ router.post("/", async (req, res) => {
         descriere: title,
         foto: image || null,
         status: "nou",
-        citizenId: 1,
+        citizenId: finalCitizenId || 1, // Fallback la 1 pentru demo
       },
       include: {
         citizen: {
@@ -71,6 +95,17 @@ router.post("/", async (req, res) => {
         },
       },
     });
+
+    // Notificăm oficialii despre noua sesizare
+    const officials = await prisma.official.findMany({ include: { user: true } });
+    for (const official of officials) {
+      await sendNotification(
+        official.userId,
+        "Sesizare Nouă",
+        `O sesizare nouă a fost adăugată în categoria "${category}": ${title}`,
+        "SESIZARE"
+      );
+    }
 
     const [savedLat, savedLng] = report.coordonateGPS.split(",").map(Number);
 
@@ -100,9 +135,9 @@ router.patch("/:id/status", async (req, res) => {
     const report = await prisma.report.update({
       where: { id: Number(req.params.id) },
       data: {
-  status,
-  resolvedAt: status === "rezolvat" ? new Date() : null,
-},
+        status,
+        resolvedAt: status === "rezolvat" ? new Date() : null,
+      },
       include: {
         citizen: {
           include: {
@@ -111,6 +146,17 @@ router.patch("/:id/status", async (req, res) => {
         },
       },
     });
+
+    // Notificăm cetățeanul despre schimbarea statusului sesizării
+    if (report.citizen.user) {
+      await sendNotification(
+        report.citizen.user.id,
+        "Actualizare Status Sesizare",
+        `Statusul sesizării dumneavoastră ("${report.descriere}") a fost actualizat în: ${status}.`,
+        "SESIZARE",
+        report.citizen.user.email
+      );
+    }
 
     const [lat, lng] = report.coordonateGPS.split(",").map(Number);
 

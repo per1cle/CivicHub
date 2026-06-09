@@ -118,7 +118,14 @@ export default function GhiseuVirtual() {
         const formData = new FormData();
         formData.append("tip", activeConfig.name);
         formData.append("emailCetatean", user?.email || "test@test.ro");
-        formData.append("dateCompletate", JSON.stringify(textData));
+
+        // Trimitem obiectul cu label-uri pentru a fi mai ușor de citit de admin
+        const detailedTextData: Record<string, string> = {};
+        activeConfig.textFields.forEach(field => {
+            detailedTextData[field.label] = textData[field.id] || "";
+        });
+
+        formData.append("dateCompletate", JSON.stringify(detailedTextData));
 
         Object.values(fileData).forEach((file) => {
             if (file) {

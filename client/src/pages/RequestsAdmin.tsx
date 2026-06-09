@@ -9,6 +9,7 @@ type RequestData = {
     dataDepunere: string;
     status: string;
     fisierAtasat: string | null;
+    dateCompletate: string | null;
     citizen: CitizenInfo;
 };
 
@@ -139,6 +140,15 @@ export default function AdminRequestsPage() {
             return JSON.parse(jsonString);
         } catch {
             return [jsonString];
+        }
+    };
+
+    const parseCompletate = (jsonString: string | null): Record<string, string> => {
+        if (!jsonString || jsonString === "null") return {};
+        try {
+            return JSON.parse(jsonString);
+        } catch {
+            return {};
         }
     };
 
@@ -319,6 +329,24 @@ export default function AdminRequestsPage() {
                                             <strong style={{ color: "#0f172a", fontSize: "12px", lineHeight: "1.5", display: "block" }}>{selectedRequest.citizen.adresa}</strong>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Date Formular Cerere</label>
+                                <div style={{ padding: "16px", background: "white", borderRadius: "20px", border: "1px solid #e2e8f0" }}>
+                                    {Object.keys(parseCompletate(selectedRequest.dateCompletate)).length > 0 ? (
+                                        <div style={{ display: "grid", gap: "10px" }}>
+                                            {Object.entries(parseCompletate(selectedRequest.dateCompletate)).map(([key, value]) => (
+                                                <div key={key} style={{ fontSize: "13px" }}>
+                                                    <span style={{ color: "#64748b", display: "block", fontSize: "11px", textTransform: "uppercase", fontWeight: "700" }}>{key}:</span>
+                                                    <strong style={{ color: "#0f172a" }}>{value}</strong>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <span style={{ fontSize: "13px", color: "#94a3b8" }}>Nicio informație suplimentară furnizată.</span>
+                                    )}
                                 </div>
                             </div>
 

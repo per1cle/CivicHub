@@ -82,6 +82,7 @@ model Request { // Cerere
   dataDepunere  DateTime @default(now())
   status        String   @default("In asteptare")
   fisierAtasat  String?
+  dateCompletate String? // Date suplimentare completate de cetățean (JSON string)
 
   // Relații
   citizenId     Int

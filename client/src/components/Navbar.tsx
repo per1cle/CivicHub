@@ -29,7 +29,7 @@ export default function Navbar() {
       <div className="nav-links">
         {user.role === 'FUNCTIONAR' ? (
           <>
-            <NavLink to="/admin">Dashboard Admin</NavLink>
+            <NavLink to="/admin/dashboard">Dashboard Admin</NavLink>
             <NavLink to="/admin/map"> Sesizări</NavLink>
             <NavLink to="/admin/requests"> Cereri</NavLink>
             <NavLink to="/admin/appointments"> Programări</NavLink>
@@ -38,7 +38,8 @@ export default function Navbar() {
         ) : (
           <>
             <NavLink to="/dashboard">Dashboard</NavLink>
-<NavLink to="/ghiseu-virtual">Ghișeu virtual</NavLink>            <NavLink to="/map">Hartă sesizări</NavLink>
+            <NavLink to="/ghiseu-virtual">Ghișeu virtual</NavLink>
+            <NavLink to="/map">Hartă sesizări</NavLink>
             <NavLink to="/appointments">Programări</NavLink>
             <NavLink to="/payments">Plăți</NavLink>
           </>

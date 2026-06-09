@@ -38,7 +38,7 @@ const services = [
 ];
 
 const allSlots = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", 
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
   "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00"
 ];
 
@@ -171,6 +171,23 @@ export default function Appointments() {
     services: services.length,
   };
 
+  const availableSlots = useMemo(() => {
+    return allSlots.filter((slot) => {
+      const isBooked = bookedSlots.includes(slot);
+      if (isBooked) return false;
+
+      const isToday = isSameDay(selectedDate, today);
+      if (isToday) {
+        const [hour, minute] = slot.split(":").map(Number);
+        const slotTime = new Date();
+        slotTime.setHours(hour, minute, 0, 0);
+        return slotTime > new Date();
+      }
+      return true;
+    });
+
+  }, [bookedSlots, selectedDate, today]);
+
   const selectedServiceData = services.find((s) => s.name === selectedService);
 
   const goToPreviousMonth = () => {
@@ -223,7 +240,7 @@ export default function Appointments() {
       setSelectedTime("");
       setNotes("");
       setMessage(`✅ Programare confirmată pentru ${selectedService}, pe data de ${formatHumanDate(selectedDateKey)}, la ora ${selectedTime}. Vei primi un email de confirmare.`);
-      
+
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       console.error("Eroare frontend:", err);
@@ -339,8 +356,8 @@ export default function Appointments() {
       </section>
 
       {message && (
-        <div className="appointment-toast" style={{ 
-          background: message.startsWith('✅') ? "#dcfce7" : "#fee2e2", 
+        <div className="appointment-toast" style={{
+          background: message.startsWith('✅') ? "#dcfce7" : "#fee2e2",
           color: message.startsWith('✅') ? "#166534" : "#991b1b",
           border: message.startsWith('✅') ? "1px solid #bbf7d0" : "1px solid #fecaca",
           marginBottom: "24px"
@@ -417,29 +434,42 @@ export default function Appointments() {
             </div>
 
             <div className="slot-grid premium-slot-grid">
-              {allSlots
-                .filter((slot) => !bookedSlots.includes(slot))
-                .map((slot) => {
-                  const selected = selectedTime === slot;
+              {availableSlots.map((slot) => {
+                const selected = selectedTime === slot;
 
-                  return (
-                    <button
-                      key={slot}
-                      onClick={() => setSelectedTime(slot)}
-                      className={[
-                        "slot-btn",
-                        selected ? "selected" : "",
-                      ].join(" ")}
-                    >
-                      <strong>{slot}</strong>
-                      <small>{selected ? "selectat" : "liber"}</small>
-                    </button>
-                  );
-                })}
+                return (
+                  <button
+                    key={slot}
+                    onClick={() => setSelectedTime(slot)}
+                    className={["slot-btn", selected ? "selected" : ""].join(
+                      " "
+                    )}
+                  >
+                    <strong>{slot}</strong>
+                    <small>{selected ? "selectat" : "liber"}</small>
+                  </button>
+                );
+              })}
 
-              {allSlots.filter((slot) => !bookedSlots.includes(slot)).length === 0 && (
-                <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "1rem", color: "#64748b" }}>
-                  Nu mai sunt locuri disponibile pentru această zi.
+              {availableSlots.length === 0 && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    textAlign: "center",
+                    padding: "2rem",
+                    color: "#64748b",
+                    background: "#f8fafc",
+                    borderRadius: "12px",
+                    border: "1px dashed #e2e8f0",
+                  }}
+                >
+                  <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
+                    🗓️
+                  </div>
+                  <strong>Ne pare rău!</strong>
+                  <p style={{ margin: 0, fontSize: "0.9rem" }}>
+                    Nu mai sunt locuri disponibile pentru această zi.
+                  </p>
                 </div>
               )}
             </div>

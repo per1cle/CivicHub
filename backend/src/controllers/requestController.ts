@@ -29,6 +29,7 @@ export const createRequest = async (req: Request, res: Response): Promise<void> 
             data: {
                 tip,
                 fisierAtasat: numeFisiere,
+                dateCompletate: dateCompletate || null,
                 citizenId: user.citizen.id
             }
         });

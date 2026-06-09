@@ -421,8 +421,36 @@ export default function AdminRequestsPage() {
             </section>
 
             {rejectionModalId && (
-                <div className="modal-overlay" onClick={() => setRejectionModalId(null)}>
-                    <div className="receipt-modal" style={{ maxWidth: "450px" }} onClick={e => e.stopPropagation()}>
+                <div 
+                    className="modal-overlay" 
+                    onClick={() => setRejectionModalId(null)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        backdropFilter: 'blur(4px)'
+                    }}
+                >
+                    <div 
+                        className="receipt-modal" 
+                        style={{ 
+                            maxWidth: "450px", 
+                            width: '90%',
+                            backgroundColor: 'white',
+                            borderRadius: '24px',
+                            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                            overflow: 'hidden',
+                            animation: 'modalSlideUp 0.3s ease-out'
+                        }} 
+                        onClick={e => e.stopPropagation()}
+                    >
                         <div className="receipt-header" style={{ padding: '40px 30px 20px' }}>
                             <div className="receipt-logo">❌</div>
                             <h2>Respingere Dosar</h2>

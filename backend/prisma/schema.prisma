@@ -83,6 +83,7 @@ model Request { // Cerere
   status        String   @default("In asteptare")
   fisierAtasat  String?
   dateCompletate String? // Date suplimentare completate de cetățean (JSON string)
+  motivRespingere String? // Motivul respingerii, dacă este cazul
 
   // Relații
   citizenId     Int

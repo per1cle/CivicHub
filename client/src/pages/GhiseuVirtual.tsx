@@ -161,6 +161,29 @@ export default function GhiseuVirtual() {
         }
     };
 
+    const handleEdit = (req: any) => {
+        const config = CONFIG_CERERI.find(c => c.name === req.tip);
+        if (!config) return;
+
+        setSelectedRequestId(config.id);
+        
+        // Parsăm datele completate (care acum au label ca cheie) înapoi în textData (care are id ca cheie)
+        const parsedCompletate = req.dateCompletate ? JSON.parse(req.dateCompletate) : {};
+        const newTextData: Record<string, string> = {};
+        
+        config.textFields.forEach(field => {
+            if (parsedCompletate[field.label]) {
+                newTextData[field.id] = parsedCompletate[field.label];
+            }
+        });
+
+        setTextData(newTextData);
+        setFileData({}); // Fișierele trebuie reîncărcate din motive de securitate
+        setMessage("");
+        setError("⚠️ Te rugăm să verifici datele, să reîncarci documentele necesare și să trimiți din nou dosarul.");
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
         <main className="civic-page">
             <section className="hero-panel">
@@ -359,14 +382,46 @@ export default function GhiseuVirtual() {
                                     <div>
                                         <h3>{req.tip}</h3>
                                         <p>Depusă pe: {new Date(req.dataDepunere).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-                                        <small>ID Cerere: #{req.id}</small>
+                                        <small style={{ display: 'block', marginBottom: req.status === 'Respins' && req.motivRespingere ? '8px' : '0' }}>
+                                            ID Cerere: #{req.id}
+                                        </small>
+
+                                        {req.status === 'Respins' && req.motivRespingere && (
+                                            <div style={{ 
+                                                background: '#fff1f2', 
+                                                borderLeft: '4px solid #ef4444', 
+                                                padding: '10px 14px', 
+                                                borderRadius: '8px',
+                                                marginTop: '8px',
+                                                fontSize: '13px',
+                                                color: '#991b1b',
+                                                maxWidth: '500px'
+                                            }}>
+                                                <strong style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', marginBottom: '2px' }}>
+                                                    Motiv Respingere:
+                                                </strong>
+                                                {req.motivRespingere}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="appointment-actions">
-                                    <span className={`status-badge badge-${req.status === 'aprobat' ? 'rezolvat' : (req.status === 'respins' ? 'nou' : 'in-lucru')}`}>
-                                        {req.status === 'In asteptare' ? 'În așteptare' : req.status}
-                                    </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                                        <span className={`status-badge badge-${req.status === 'Aprobat' ? 'rezolvat' : (req.status === 'Respins' ? 'nou' : 'in-lucru')}`}>
+                                            {req.status === 'In asteptare' ? 'În așteptare' : req.status}
+                                        </span>
+                                        
+                                        {req.status === 'Respins' && (
+                                            <button 
+                                                className="appointment-secondary-btn"
+                                                onClick={() => handleEdit(req)}
+                                                style={{ fontSize: '12px', padding: '6px 12px' }}
+                                            >
+                                                Editează și Retrimite
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </article>
                         ))}

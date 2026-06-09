@@ -107,7 +107,10 @@ export const updateRequestStatus = async (req: Request, res: Response): Promise<
     try {
         const updatedRequest = await prisma.request.update({
             where: { id: id },
-            data: { status: status },
+            data: { 
+                status: status,
+                motivRespingere: status === "Respins" ? motivRespingere : null
+            },
             include: { citizen: { include: { user: true } } }
         });
 

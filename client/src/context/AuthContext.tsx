@@ -20,8 +20,14 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("Eroare la parsarea userului din localStorage", e);
+      localStorage.removeItem('user');
+      return null;
+    }
   });
   
   const [token, setToken] = useState<string | null>(() => {

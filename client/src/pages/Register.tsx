@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from "../api";
 
 const Register = () => {
   // Stările pentru toate câmpurile necesare
@@ -18,7 +19,7 @@ const Register = () => {
   const navigate = useNavigate();
 
   if (user) {
-    if (user.role === 'ADMIN') {
+    if (user.role === 'FUNCTIONAR') {
       return <Navigate to="/admin/dashboard" replace />;
     }
     return <Navigate to="/dashboard" replace />;
@@ -29,7 +30,7 @@ const Register = () => {
     setEroare('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/signup', {
+      const response = await fetch(`${API_URL}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -46,7 +47,7 @@ const Register = () => {
 
       if (response.ok) {
         login(data.user, data.token);
-        if (data.user.role === 'ADMIN') {
+        if (data.user.role === 'FUNCTIONAR') {
           navigate('/admin/dashboard');
         } else {
           navigate('/dashboard');

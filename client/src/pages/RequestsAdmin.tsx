@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api";
 
 type UserInfo = { nume: string; prenume: string; email: string };
 type CitizenInfo = { cnpVirtual: string; telefon: string; adresa: string; user: UserInfo };
@@ -43,12 +44,12 @@ export default function AdminRequestsPage() {
 
     const fetchRequests = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:3001/api/requests/all");
-            if (!res.ok) throw new Error("Eroare la preluarea cererilor");
-            const data = await res.json();
-            setRequests(data);
-            if (data.length > 0 && selectedRequestId === null) {
-                setSelectedRequestId(data[0].id);
+            const data = await apiFetch("/requests/all");
+            if (Array.isArray(data)) {
+                setRequests(data);
+                if (data.length > 0 && selectedRequestId === null) {
+                    setSelectedRequestId(data[0].id);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -64,24 +65,19 @@ export default function AdminRequestsPage() {
 
     const handleUpdateStatus = async (id: number, newStatus: string, reason?: string) => {
         try {
-            const res = await fetch(`http://localhost:3001/api/requests/${id}/status`, {
+            await apiFetch(`/requests/${id}/status`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: newStatus, motivRespingere: reason }),
             });
 
-            if (res.ok) {
-                setToast(`Dosarul #${id} a fost marcat ca: ${newStatus}`);
-                fetchRequests();
-                setRejectionModalId(null);
-                setRejectionReason("");
-                setTimeout(() => setToast(""), 3000);
-            } else {
-                setToast("Eroare la actualizarea statusului.");
-            }
+            setToast(`Dosarul #${id} a fost marcat ca: ${newStatus}`);
+            fetchRequests();
+            setRejectionModalId(null);
+            setRejectionReason("");
+            setTimeout(() => setToast(""), 3000);
         } catch (err) {
             console.error(err);
-            setToast("Eroare de conexiune cu serverul.");
+            setToast("Eroare la actualizarea statusului.");
         }
     };
 

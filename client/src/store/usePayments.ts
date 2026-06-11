@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../api";
 
 export type PaymentStatus = "neplatit" | "platit";
 export type PaymentCategory = "locuinta" | "auto" | "urbanism" | "amenzi";
@@ -13,8 +14,6 @@ export type Payment = {
   date?: string;
   receiptCode?: string;
 };
-
-const API_URL = "http://localhost:3001/api/payments";
 
 function mapPaymentFromBackend(item: any): Payment {
   return {
@@ -36,11 +35,14 @@ export function usePayments(userId?: number) {
 
   async function fetchPayments() {
     try {
-      const url = userId ? `${API_URL}?userId=${userId}` : API_URL;
-      const res = await fetch(url);
-      const data = await res.json();
+      const path = userId ? `/payments?userId=${userId}` : "/payments";
+      const data = await apiFetch(path);
 
-      setPayments(data.map(mapPaymentFromBackend));
+      if (Array.isArray(data)) {
+        setPayments(data.map(mapPaymentFromBackend));
+      } else {
+        console.error("Format date plăți invalid:", data);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -52,7 +54,7 @@ export function usePayments(userId?: number) {
 
   const pay = async (id: number) => {
     try {
-      await fetch(`${API_URL}/${id}/pay`, {
+      await apiFetch(`/payments/${id}/pay`, {
         method: "PATCH",
       });
 

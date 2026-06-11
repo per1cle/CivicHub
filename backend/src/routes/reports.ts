@@ -1,10 +1,11 @@
 import { Router } from "express";
 import prisma from "../lib/prisma.js";
 import { sendNotification } from "../services/notificationService.js";
+import { authenticateToken, authorizeRoles, type AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.query;
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -22,9 +23,18 @@ router.get("/", async (req, res) => {
     };
 
     // Aplicăm filtrul de user DOAR dacă avem un ID valid
-    const parsedUserId = userId ? Number(userId) : NaN;
-    if (!isNaN(parsedUserId)) {
-      whereClause.AND.push({ citizen: { userId: parsedUserId } });
+    let targetUserId: number | undefined;
+    if (req.user?.role === "FUNCTIONAR") {
+      targetUserId = userId ? Number(userId) : undefined;
+    } else {
+      // Pentru cetățeni, filtrăm după ID-ul lor dacă vor să vadă doar sesizările proprii
+      if (userId) {
+        targetUserId = req.user?.userId;
+      }
+    }
+
+    if (targetUserId) {
+      whereClause.AND.push({ citizen: { userId: targetUserId } });
     }
 
     const reports = await prisma.report.findMany({
@@ -64,18 +74,21 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { title, lat, lng, category, image, citizenId, userId } = req.body;
+    const { title, lat, lng, category, image } = req.body;
+    const userId = req.user?.userId;
 
-    let finalCitizenId = citizenId ? Number(citizenId) : null;
+    if (!userId) {
+      return res.status(401).json({ message: "Utilizator neautorizat." });
+    }
 
-    // Dacă nu avem citizenId dar avem userId, căutăm automat cetățeanul
-    if (!finalCitizenId && userId) {
-      const citizen = await prisma.citizen.findUnique({
-        where: { userId: Number(userId) }
-      });
-      if (citizen) finalCitizenId = citizen.id;
+    const citizen = await prisma.citizen.findUnique({
+      where: { userId: Number(userId) }
+    });
+
+    if (!citizen) {
+      return res.status(404).json({ message: "Cetățeanul nu a fost găsit." });
     }
 
     const report = await prisma.report.create({
@@ -85,7 +98,7 @@ router.post("/", async (req, res) => {
         descriere: title,
         foto: image || null,
         status: "nou",
-        citizenId: finalCitizenId || 1, // Fallback la 1 pentru demo
+        citizenId: citizen.id,
       },
       include: {
         citizen: {
@@ -128,7 +141,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.patch("/:id/status", async (req, res) => {
+router.patch("/:id/status", authenticateToken, authorizeRoles("FUNCTIONAR"), async (req: AuthRequest, res) => {
   try {
     const { status } = req.body;
 

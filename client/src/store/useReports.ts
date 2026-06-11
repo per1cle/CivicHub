@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../api";
 
 export type ReportStatus = "nou" | "in lucru" | "rezolvat";
 export type ReportPriority = "scazuta" | "medie" | "ridicata";
@@ -17,17 +18,18 @@ export type Report = {
   resolvedAt?: string | null;
 };
 
-const API_URL = "http://localhost:3001/api/reports";
-
 export function useReports(userId?: number) {
   const [reports, setReports] = useState<Report[]>([]);
 
   async function fetchReports() {
     try {
-      const url = userId ? `${API_URL}?userId=${userId}` : API_URL;
-      const res = await fetch(url);
-      const data = await res.json();
-      setReports(data);
+      const path = userId ? `/reports?userId=${userId}` : "/reports";
+      const data = await apiFetch(path);
+      if (Array.isArray(data)) {
+        setReports(data);
+      } else {
+        console.error("Format date sesizări invalid:", data);
+      }
     } catch (err) {
       console.error("Eroare fetchReports:", err);
     }
@@ -41,17 +43,12 @@ export function useReports(userId?: number) {
     report: Omit<Report, "citizenName" | "createdAt">
   ) => {
     try {
-      const res = await fetch(API_URL, {
+      const data = await apiFetch("/reports", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ ...report, userId }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
+      if (data.message && !data.id) {
         return { success: false, message: data.message };
       }
 
@@ -65,20 +62,13 @@ export function useReports(userId?: number) {
 
   const updateStatus = async (id: number, status: ReportStatus) => {
     try {
-      const res = await fetch(`${API_URL}/${id}/status`, {
+      const data = await apiFetch(`/reports/${id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ status }),
       });
 
-      const updatedReport = await res.json();
-
-      if (!res.ok) return;
-
       setReports((prev) =>
-        prev.map((report) => (report.id === id ? updatedReport : report))
+        prev.map((report) => (report.id === id ? data : report))
       );
     } catch (err) {
       console.error("Eroare updateStatus:", err);

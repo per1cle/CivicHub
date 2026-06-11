@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { createRequest, getAllRequests, getUserRequests, updateRequestStatus } from '../controllers/requestController.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -23,11 +24,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post('/create', upload.array('documente', 10), createRequest);
+router.post('/create', authenticateToken, upload.array('documente', 10), createRequest);
 
-router.get('/history', getUserRequests);
+router.get('/history', authenticateToken, getUserRequests);
 
-router.get('/all', getAllRequests);
-router.patch('/:id/status', updateRequestStatus);
+router.get('/all', authenticateToken, authorizeRoles("FUNCTIONAR"), getAllRequests);
+router.patch('/:id/status', authenticateToken, authorizeRoles("FUNCTIONAR"), updateRequestStatus);
 
 export default router;

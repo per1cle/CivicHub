@@ -71,7 +71,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["FUNCTIONAR"]}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -80,7 +80,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/map"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["FUNCTIONAR"]}>
             <ReportsMapAdmin />
           </ProtectedRoute>
         }
@@ -89,7 +89,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/appointments"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["FUNCTIONAR"]}>
             <AppointmentsAdmin />
           </ProtectedRoute>
         }
@@ -98,7 +98,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/payments"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["FUNCTIONAR"]}>
             <AdminPayments />
           </ProtectedRoute>
         }
@@ -107,7 +107,7 @@ export default function AppRoutes() {
       <Route
         path="/admin/requests"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["FUNCTIONAR"]}>
             <AdminRequestsPage />
           </ProtectedRoute>
         }

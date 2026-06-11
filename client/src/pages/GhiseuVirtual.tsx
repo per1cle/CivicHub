@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../api';
 
 const CONFIG_CERERI = [
     {
@@ -62,9 +63,8 @@ export default function GhiseuVirtual() {
     const fetchRequests = useCallback(async () => {
         if (!user?.id) return;
         try {
-            const res = await fetch(`http://localhost:3001/api/requests/history?userId=${user.id}`);
-            if (res.ok) {
-                const data = await res.json();
+            const data = await apiFetch(`/requests/history?userId=${user.id}`);
+            if (Array.isArray(data)) {
                 setRequests(data);
             }
         } catch (err) {
@@ -134,27 +134,20 @@ export default function GhiseuVirtual() {
         });
 
         try {
-            const res = await fetch("http://localhost:3001/api/requests/create", {
+            const data = await apiFetch("/requests/create", {
                 method: "POST",
                 body: formData,
             });
 
-            const data = await res.json();
-
-            if (res.ok) {
-                setMessage(data.mesaj || "Dosarul a fost depus cu succes!");
-                setTextData({});
-                setFileData({});
-                setSelectedRequestId("");
-                fetchRequests();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                setError(data.error || "A apărut o eroare la depunerea cererii.");
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        } catch (err) {
+            setMessage(data.mesaj || "Dosarul a fost depus cu succes!");
+            setTextData({});
+            setFileData({});
+            setSelectedRequestId("");
+            fetchRequests();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err: any) {
             console.error(err);
-            setError("Eroare de conexiune cu serverul primăriei.");
+            setError(err.message || "Eroare de conexiune cu serverul primăriei.");
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } finally {
             setLoading(false);

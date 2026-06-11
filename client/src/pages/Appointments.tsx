@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api";
 
 type AppointmentStatus = "confirmata" | "anulata";
 
@@ -11,8 +12,6 @@ type Appointment = {
   notes?: string;
   status: AppointmentStatus;
 };
-
-const API_URL = "http://localhost:3001/api/appointments";
 
 const services = [
   {
@@ -133,10 +132,14 @@ export default function Appointments() {
   const fetchAppointments = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await fetch(`${API_URL}?userId=${user.id}`);
-      const data = await res.json();
+      const data = await apiFetch(`/appointments?userId=${user.id}`);
 
-      setAppointments(data.map(mapAppointmentFromBackend));
+      if (Array.isArray(data)) {
+        setAppointments(data.map(mapAppointmentFromBackend));
+      } else {
+        console.error("Format date programări invalid:", data);
+        setMessage("Nu s-au putut încărca programările.");
+      }
     } catch (err) {
       console.error(err);
       setMessage("Nu s-au putut încărca programările.");
@@ -214,11 +217,8 @@ export default function Appointments() {
     }
 
     try {
-      const res = await fetch(API_URL, {
+      const data = await apiFetch("/appointments", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           date: selectedDateKey,
           time: selectedTime,
@@ -228,10 +228,8 @@ export default function Appointments() {
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage("❌ " + (data.message || "Programarea nu a putut fi salvată."));
+      if (data.message && !data.id) {
+        setMessage("❌ " + data.message);
         return;
       }
 
@@ -250,15 +248,9 @@ export default function Appointments() {
 
   const cancelAppointment = async (id: number) => {
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      await apiFetch(`/appointments/${id}`, {
         method: "DELETE",
       });
-
-      if (!res.ok) {
-        setMessage("❌ Programarea nu a putut fi anulată.");
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
 
       await fetchAppointments();
       setMessage("✅ Programarea a fost anulată cu succes.");
@@ -278,11 +270,8 @@ export default function Appointments() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
+      await apiFetch(`/appointments/${id}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           date: selectedDateKey,
           time: selectedTime,
@@ -290,12 +279,6 @@ export default function Appointments() {
           notes,
         }),
       });
-
-      if (!res.ok) {
-        setMessage("❌ Programarea nu a putut fi reprogramată.");
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        return;
-      }
 
       await fetchAppointments();
 

@@ -1,13 +1,15 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { sendNotification } from '../services/notificationService.js';
+import { type AuthRequest } from '../middleware/auth.js';
 
-export const createRequest = async (req: Request, res: Response): Promise<void> => {
+export const createRequest = async (req: AuthRequest, res: Response): Promise<void> => {
     // Acum req.body va exista sigur, pentru că Multer l-a parsat pentru noi!
-    const { tip, emailCetatean, dateCompletate } = req.body;
+    const { tip, dateCompletate } = req.body;
+    const userIdFromToken = req.user?.userId;
 
     // Castăm request-ul pentru a include tipurile Multer pentru fișiere multiple (.array)
-    const multerReq = req as Request & { files?: Express.Multer.File[] };
+    const multerReq = req as AuthRequest & { files?: Express.Multer.File[] };
 
     // Extragem numele fișierelor salvate (dacă există) și le transformăm întrun string JSON
     const numeFisiere = multerReq.files && multerReq.files.length > 0
@@ -16,7 +18,7 @@ export const createRequest = async (req: Request, res: Response): Promise<void> 
 
     try {
         const user = await prisma.user.findUnique({
-            where: { email: emailCetatean },
+            where: { id: userIdFromToken },
             include: { citizen: true }
         });
 
@@ -52,23 +54,14 @@ export const createRequest = async (req: Request, res: Response): Promise<void> 
     }
 };
 
-export const getUserRequests = async (req: Request, res: Response): Promise<void> => {
-    const { email, userId } = req.query;
+export const getUserRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+    const userIdFromToken = req.user?.userId;
 
     try {
-        let user;
-        const parsedUserId = userId ? Number(userId) : NaN;
-        if (!isNaN(parsedUserId)) {
-            user = await prisma.user.findUnique({
-                where: { id: parsedUserId },
-                include: { citizen: true }
-            });
-        } else if (email) {
-            user = await prisma.user.findUnique({
-                where: { email: email as string },
-                include: { citizen: true }
-            });
-        }
+        const user = await prisma.user.findUnique({
+            where: { id: userIdFromToken },
+            include: { citizen: true }
+        });
 
         if (!user || !user.citizen) {
             res.status(404).json({ error: "Cetățeanul nu a fost găsit." });

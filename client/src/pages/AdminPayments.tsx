@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api";
 
 type PaymentStatus = "neplatit" | "platit";
 type PaymentCategory = "locuinta" | "auto" | "urbanism" | "amenzi";
@@ -69,14 +70,12 @@ export default function AdminPaymentsPage() {
     // Aducem datele REALE din backend
     const fetchPayments = async () => {
         try {
-            const res = await fetch("http://localhost:3001/api/payments");
-            if (!res.ok) throw new Error("Eroare la preluarea plăților");
-
-            const data = await res.json();
-            setPayments(data);
-
-            if (data.length > 0 && selectedPaymentId === null) {
-                setSelectedPaymentId(data[0].id);
+            const data = await apiFetch("/payments");
+            if (Array.isArray(data)) {
+                setPayments(data);
+                if (data.length > 0 && selectedPaymentId === null) {
+                    setSelectedPaymentId(data[0].id);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -130,25 +129,19 @@ export default function AdminPaymentsPage() {
     const handleIssueTax = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await fetch("http://localhost:3001/api/payments/issue", {
+            await apiFetch("/payments/issue", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(newTaxData),
             });
 
-            if (res.ok) {
-                setToast(`Taxa "${newTaxData.title}" a fost emisă cu succes!`);
-                setIsIssuing(false);
-                setNewTaxData({ nume: "", prenume: "", cnpVirtual: "", title: "", amount: "", category: "amenzi", dueDate: "" });
-                fetchPayments();
-                setTimeout(() => setToast(""), 4000);
-            } else {
-                const errorData = await res.json();
-                setToast(errorData.error || "Eroare la emiterea taxei.");
-            }
-        } catch (err) {
+            setToast(`Taxa "${newTaxData.title}" a fost emisă cu succes!`);
+            setIsIssuing(false);
+            setNewTaxData({ nume: "", prenume: "", cnpVirtual: "", title: "", amount: "", category: "amenzi", dueDate: "" });
+            fetchPayments();
+            setTimeout(() => setToast(""), 4000);
+        } catch (err: any) {
             console.error(err);
-            setToast("Eroare de conexiune cu serverul.");
+            setToast(err.message || "Eroare la emiterea taxei.");
         }
     };
 
@@ -156,25 +149,19 @@ export default function AdminPaymentsPage() {
         if (!selectedPayment) return;
 
         try {
-            const res = await fetch(`http://localhost:3001/api/payments/${selectedPayment.id}/reminder`, {
+            await apiFetch(`/payments/${selectedPayment.id}/reminder`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
             });
 
-            if (res.ok) {
-                setToast(`Memento trimis cu succes către ${selectedPayment.citizen.user.email}`);
-                setReminderSent(true);
-                setTimeout(() => {
-                    setToast("");
-                    setReminderSent(false);
-                }, 4000);
-            } else {
-                const errorData = await res.json();
-                setToast(errorData.error || "Eroare la trimiterea mementoului.");
-            }
-        } catch (err) {
+            setToast(`Memento trimis cu succes către ${selectedPayment.citizen.user.email}`);
+            setReminderSent(true);
+            setTimeout(() => {
+                setToast("");
+                setReminderSent(false);
+            }, 4000);
+        } catch (err: any) {
             console.error(err);
-            setToast("Eroare de conexiune cu serverul.");
+            setToast(err.message || "Eroare la trimiterea mementoului.");
         }
     };
 

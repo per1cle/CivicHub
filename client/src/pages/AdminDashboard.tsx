@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useReports } from "../store/useReports";
 import { useNotifications } from "../hooks/useNotifications";
+import { apiFetch } from "../api";
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -15,9 +16,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/appointments");
-        if (res.ok) {
-          const data = await res.json();
+        const data = await apiFetch("/appointments");
+        if (Array.isArray(data)) {
           setAppointments(data);
         }
       } catch (err) {

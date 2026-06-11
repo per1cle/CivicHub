@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { apiFetch } from "../api";
 
 type UserInfo = { nume: string; prenume: string; email: string };
 type CitizenInfo = { cnpVirtual: string; telefon: string; user: UserInfo };
@@ -24,10 +25,10 @@ export default function AppointmentsAdmin() {
 
     const fetchAppointments = async () => {
         try {
-            const res = await fetch("http://localhost:3001/api/appointments");
-            if (!res.ok) throw new Error("Eroare la preluarea programărilor");
-            const data = await res.json();
-            setAppointments(data);
+            const data = await apiFetch("/appointments");
+            if (Array.isArray(data)) {
+                setAppointments(data);
+            }
         } catch (err) {
             console.error(err);
             setToast("Eroare la încărcarea datelor din server.");
@@ -44,20 +45,16 @@ export default function AppointmentsAdmin() {
         if (!window.confirm("Ești sigur că vrei să anulezi această programare?")) return;
 
         try {
-            const res = await fetch(`http://localhost:3001/api/appointments/${id}`, {
+            await apiFetch(`/appointments/${id}`, {
                 method: "DELETE",
             });
 
-            if (res.ok) {
-                setToast(`Programarea #${id} a fost anulată.`);
-                fetchAppointments();
-                setTimeout(() => setToast(""), 3000);
-            } else {
-                setToast("Eroare la anularea programării.");
-            }
+            setToast(`Programarea #${id} a fost anulată.`);
+            fetchAppointments();
+            setTimeout(() => setToast(""), 3000);
         } catch (err) {
             console.error(err);
-            setToast("Eroare de conexiune cu serverul.");
+            setToast("Eroare la anularea programării.");
         }
     };
 

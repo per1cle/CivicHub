@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useReports } from "../store/useReports";
 import { usePayments } from "../store/usePayments";
 import { useNotifications } from "../hooks/useNotifications";
+import { apiFetch } from "../api";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -20,12 +21,9 @@ const Dashboard = () => {
       if (!user?.id) return;
 
       try {
-        const res = await fetch(
-          `http://localhost:3001/api/appointments?userId=${user.id}`
-        );
+        const data = await apiFetch(`/appointments?userId=${user.id}`);
 
-        if (res.ok) {
-          const data = await res.json();
+        if (Array.isArray(data)) {
           const activeAppointments = data.filter(
             (a: any) => a.status === "confirmata"
           );
@@ -44,8 +42,8 @@ const Dashboard = () => {
     navigate("/");
   };
 
-  const cereriActive = reports.filter((r) => r.status !== "rezolvat").length;
-  const platiRestante = payments.filter((p) => p.status === "neplatit").length;
+  const cereriActive = Array.isArray(reports) ? reports.filter((r) => r.status !== "rezolvat").length : 0;
+  const platiRestante = Array.isArray(payments) ? payments.filter((p) => p.status === "neplatit").length : 0;
 
   return (
     <main className="civic-page">

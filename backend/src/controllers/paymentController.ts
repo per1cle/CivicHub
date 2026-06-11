@@ -1,16 +1,24 @@
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import prisma from '../lib/prisma.js';
 import { sendNotification } from '../services/notificationService.js';
+import { type AuthRequest } from '../middleware/auth.js';
 
 // 1. Aducem toate plățile (Acum includem și datele cetățeanului pentru admin)
-export const getAllPayments = async (req: Request, res: Response): Promise<void> => {
+export const getAllPayments = async (req: AuthRequest, res: Response): Promise<void> => {
     const { userId } = req.query;
 
     try {
-        const parsedUserId = userId ? Number(userId) : NaN;
-        const whereClause = !isNaN(parsedUserId) ? {
+        let targetUserId: number | undefined;
+        
+        if (req.user?.role === "FUNCTIONAR") {
+            targetUserId = userId ? Number(userId) : undefined;
+        } else {
+            targetUserId = req.user?.userId;
+        }
+
+        const whereClause = targetUserId ? {
             citizen: {
-                userId: parsedUserId
+                userId: targetUserId
             }
         } : {};
 

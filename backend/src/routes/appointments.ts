@@ -1,13 +1,20 @@
 import { Router } from "express";
 import prisma from "../lib/prisma.js";
 import { sendNotification } from "../services/notificationService.js";
+import { authenticateToken, authorizeRoles, type AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
-router.get("/", async (req, res) => {
+router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   const { userId } = req.query;
   try {
     const parsedUserId = userId ? Number(userId) : NaN;
+    
+    // Dacă nu e funcționar și încearcă să vadă programările altuia sau toate programările
+    if (req.user?.role !== "FUNCTIONAR" && (isNaN(parsedUserId) || parsedUserId !== req.user?.userId)) {
+      return res.status(403).json({ message: "Acces interzis." });
+    }
+
     const whereClause = !isNaN(parsedUserId) ? {
       citizen: {
         userId: parsedUserId
@@ -39,21 +46,21 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { date, time, service, notes, citizenId, userId } = req.body;
+    const { date, time, service, notes } = req.body;
+    const userId = req.user?.userId;
 
-    let finalCitizenId = citizenId ? Number(citizenId) : null;
-
-    if (!finalCitizenId && userId) {
-      const citizen = await prisma.citizen.findUnique({
-        where: { userId: Number(userId) }
-      });
-      if (citizen) finalCitizenId = citizen.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Utilizator neautorizat." });
     }
 
-    if (!finalCitizenId) {
-      return res.status(400).json({ message: "Cetățeanul nu a putut fi identificat." });
+    const citizen = await prisma.citizen.findUnique({
+      where: { userId: Number(userId) }
+    });
+
+    if (!citizen) {
+      return res.status(404).json({ message: "Cetățeanul nu a putut fi identificat." });
     }
 
     const appointment = await prisma.appointment.create({
@@ -61,7 +68,7 @@ router.post("/", async (req, res) => {
         dataOra: new Date(`${date}T${time}:00`),
         serviciuAles: service,
         observatii: notes,
-        citizenId: finalCitizenId,
+        citizenId: citizen.id,
       },
       include: {
         citizen: {
@@ -107,12 +114,26 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { date, time, service, notes } = req.body;
+    const appointmentId = Number(req.params.id);
+
+    const existingAppointment = await prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: { citizen: true }
+    });
+
+    if (!existingAppointment) {
+      return res.status(404).json({ message: "Programarea nu există." });
+    }
+
+    if (existingAppointment.citizen.userId !== req.user?.userId && req.user?.role !== "FUNCTIONAR") {
+      return res.status(403).json({ message: "Acces interzis." });
+    }
 
     const appointment = await prisma.appointment.update({
-      where: { id: Number(req.params.id) },
+      where: { id: appointmentId },
       data: {
         dataOra: new Date(`${date}T${time}:00`),
         serviciuAles: service,
@@ -144,7 +165,7 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const appointmentId = Number(req.params.id);
     const appointment = await prisma.appointment.findUnique({
@@ -160,6 +181,10 @@ router.delete("/:id", async (req, res) => {
 
     if (!appointment) {
       return res.status(404).json({ message: "Programarea nu există." });
+    }
+
+    if (appointment.citizen.userId !== req.user?.userId && req.user?.role !== "FUNCTIONAR") {
+      return res.status(403).json({ message: "Acces interzis." });
     }
 
     await prisma.appointment.update({
